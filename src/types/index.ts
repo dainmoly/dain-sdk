@@ -1,3 +1,3 @@
 export * from "./config";
 export * from "./account";
-export * from "./program";
+export * from "./transaction";

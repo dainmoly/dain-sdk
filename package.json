@@ -1,7 +1,7 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
@@ -33,6 +33,7 @@
     "@coral-xyz/anchor": "0.29.0",
     "@pythnetwork/client": "^2.22.0",
     "@solana/spl-token": "0.3.7",
+    "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/web3.js": "^1.95.4",
     "@switchboard-xyz/on-demand": "^1.2.47",
     "@types/bn.js": "^5.1.6",

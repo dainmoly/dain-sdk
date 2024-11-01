@@ -650,7 +650,7 @@ export type HistoricalOracleData = {
     lastOracleDelay: BN;
     lastOracleConf: BN;
     lastOraclePriceTwap: BN;
-    lastOraclePriceTwap5Min: BN;
+    // lastOraclePriceTwap5Min: BN;
     lastOraclePriceTwapTs: BN;
 };
 
@@ -658,7 +658,7 @@ export type HistoricalIndexData = {
     lastIndexBidPrice: BN;
     lastIndexAskPrice: BN;
     lastIndexPriceTwap: BN;
-    lastIndexPriceTwap5Min: BN;
+    // lastIndexPriceTwap5Min: BN;
     lastIndexPriceTwapTs: BN;
 };
 
@@ -759,11 +759,11 @@ export type PoolBalance = {
 export type AMM = {
     baseAssetReserve: BN;
     sqrtK: BN;
-    cumulativeFundingRate: BN;
+    // cumulativeFundingRate: BN;
     lastFundingRate: BN;
     lastFundingRateTs: BN;
     lastMarkPriceTwap: BN;
-    lastMarkPriceTwap5Min: BN;
+    // lastMarkPriceTwap5Min: BN;
     lastMarkPriceTwapTs: BN;
     lastTradeTs: BN;
 
@@ -779,7 +779,7 @@ export type AMM = {
     pegMultiplier: BN;
     cumulativeFundingRateLong: BN;
     cumulativeFundingRateShort: BN;
-    last24HAvgFundingRate: BN;
+    // last24HAvgFundingRate: BN;
     lastFundingRateShort: BN;
     lastFundingRateLong: BN;
 
@@ -836,7 +836,7 @@ export type AMM = {
     longIntensityVolume: BN;
     shortIntensityCount: number;
     shortIntensityVolume: BN;
-    volume24H: BN;
+    // volume24H: BN;
     minOrderSize: BN;
     maxPositionSize: BN;
 
@@ -956,7 +956,7 @@ export type Order = {
     marketIndex: number;
     price: BN;
     baseAssetAmount: BN;
-    quoteAssetAmount: BN;
+    // quoteAssetAmount: BN;
     baseAssetAmountFilled: BN;
     quoteAssetAmountFilled: BN;
     direction: PositionDirection;
