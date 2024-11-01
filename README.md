@@ -1,1 +1,1 @@
-# dain-sdk
+# DAIN's prediction SDK
