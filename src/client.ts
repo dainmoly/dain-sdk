@@ -1,4 +1,4 @@
-import { AnchorProvider, BN, Program, Wallet as AnchorWallet } from "@coral-xyz/anchor";
+import { AnchorProvider, BN, Program } from "@coral-xyz/anchor";
 import { ConfirmOptions, Connection, Keypair, PublicKey, SendOptions, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -8,6 +8,7 @@ import { buildTransaction, executeTransaction } from "./transaction";
 import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME } from "./constants";
 import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
 import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
+import { NodeWallet } from "./modules/nodeWallet";
 
 
 export class DainClient {
@@ -34,7 +35,7 @@ export class DainClient {
     this.confirmOpts = config.confirmOpts ?? CONFIRMATION_OPTS;
     this.programId = config.programId ?? DAIN_PROGRAM_ID;
 
-    const provider = new AnchorProvider(connection, wallet ?? new AnchorWallet(Keypair.generate()), this.confirmOpts);
+    const provider = new AnchorProvider(connection, wallet ?? new NodeWallet(Keypair.generate()), this.confirmOpts);
     this.program = new Program<Drift>(IDL, this.programId, provider);
 
     this.authority = wallet?.publicKey ?? PublicKey.default;
@@ -43,9 +44,15 @@ export class DainClient {
   }
 
   /* Updaters */
-  public async setWallet(wallet?: Wallet) {
-    this.wallet = wallet;
-    this.getUserStatsPublicKey();
+  static async getFromWallet(
+    config: DainConfig,
+    connection: Connection,
+    wallet?: Wallet
+  ): Promise<DainClient> {
+    const client = new DainClient(config, connection, wallet);
+    await client.load();
+
+    return client;
   }
 
   /* State accounts */
