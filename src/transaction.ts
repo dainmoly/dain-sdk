@@ -6,8 +6,8 @@ export const executeTransaction = async (
   connection: Connection,
   tx: Buffer,
   sendOptions: SendOptions,
-  blockhashInfo: BlockhashWithExpiryBlockHeight
 ): Promise<string | null> => {
+  const blockhashInfo = await connection.getLatestBlockhash(sendOptions.preflightCommitment);
 
   const txid = await connection.sendRawTransaction(tx, sendOptions);
 

@@ -1,19 +1,21 @@
-import { BN, Program, Wallet } from "@coral-xyz/anchor";
-import { ConfirmOptions, Connection, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
+import { AnchorProvider, BN, Program } from "@coral-xyz/anchor";
+import { ConfirmOptions, Connection, PublicKey, SendOptions, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount } from "./types";
+import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
 import { IDL, Drift } from "./idls/drift";
 import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
 import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME } from "./constants";
 import { AccountLoader } from "./accountLoader";
+import { executeTransaction } from "./transaction";
 
 export class DainClient {
   connection: Connection;
   programId: PublicKey;
   program: DainProgram;
   wallet?: Wallet;
-  opts?: ConfirmOptions;
+  sendOpts: SendOptions;
+  confirmOpts: ConfirmOptions;
   accountLoader: AccountLoader;
 
   readonly authority: PublicKey;
@@ -27,13 +29,21 @@ export class DainClient {
   public constructor(config: DainConfig, connection: Connection, wallet?: Wallet) {
     this.connection = connection;
     this.wallet = wallet;
-    this.opts = config.opts ?? CONFIRMATION_OPTS;
+    this.sendOpts = config.sendOpts ?? CONFIRMATION_OPTS;
+    this.confirmOpts = config.confirmOpts ?? CONFIRMATION_OPTS;
     this.programId = config.programId ?? DAIN_PROGRAM_ID;
-    this.program = new Program<Drift>(IDL, this.programId);
+
+    if (wallet) {
+      const provider = new AnchorProvider(connection, wallet, this.confirmOpts);
+      this.program = new Program<Drift>(IDL, this.programId, provider);
+    }
+    else {
+      this.program = new Program<Drift>(IDL, this.programId);
+    }
 
     this.authority = wallet?.publicKey ?? PublicKey.default;
     this.payer = wallet?.publicKey ?? PublicKey.default;
-    this.accountLoader = new AccountLoader(connection, this.program, this.opts.commitment);
+    this.accountLoader = new AccountLoader(connection, this.program, this.confirmOpts.commitment);
   }
 
   /* State accounts */
@@ -73,6 +83,15 @@ export class DainClient {
   }
 
   /* Admin functions */
+  public async initialize(quoteAssetMint: PublicKey): Promise<TransactionSignature | null> {
+    const initializeIx = await this.getInitializeIx(quoteAssetMint);
+    const tx = new Transaction();
+    tx.add(initializeIx);
+
+    const signature = await executeTransaction(this.connection, tx.serialize(), this.sendOpts);
+    return signature;
+  }
+
   public async getInitializeIx(quoteAssetMint: PublicKey): Promise<TransactionInstruction> {
     const initializeIx = await this.program.methods.initialize()
       .accounts({
