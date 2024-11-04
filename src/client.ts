@@ -1,13 +1,14 @@
-import { AnchorProvider, BN, Program } from "@coral-xyz/anchor";
-import { ConfirmOptions, Connection, PublicKey, SendOptions, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
+import { AnchorProvider, BN, Program, Wallet as AnchorWallet } from "@coral-xyz/anchor";
+import { ConfirmOptions, Connection, Keypair, PublicKey, SendOptions, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
 import { IDL, Drift } from "./idls/drift";
-import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
-import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME } from "./constants";
 import { AccountLoader } from "./accountLoader";
-import { executeTransaction } from "./transaction";
+import { buildTransaction, executeTransaction } from "./transaction";
+import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME } from "./constants";
+import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
+import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
+
 
 export class DainClient {
   connection: Connection;
@@ -33,17 +34,18 @@ export class DainClient {
     this.confirmOpts = config.confirmOpts ?? CONFIRMATION_OPTS;
     this.programId = config.programId ?? DAIN_PROGRAM_ID;
 
-    if (wallet) {
-      const provider = new AnchorProvider(connection, wallet, this.confirmOpts);
-      this.program = new Program<Drift>(IDL, this.programId, provider);
-    }
-    else {
-      this.program = new Program<Drift>(IDL, this.programId);
-    }
+    const provider = new AnchorProvider(connection, wallet ?? new AnchorWallet(Keypair.generate()), this.confirmOpts);
+    this.program = new Program<Drift>(IDL, this.programId, provider);
 
     this.authority = wallet?.publicKey ?? PublicKey.default;
     this.payer = wallet?.publicKey ?? PublicKey.default;
     this.accountLoader = new AccountLoader(connection, this.program, this.confirmOpts.commitment);
+  }
+
+  /* Updaters */
+  public async setWallet(wallet?: Wallet) {
+    this.wallet = wallet;
+    this.getUserStatsPublicKey();
   }
 
   /* State accounts */
@@ -83,20 +85,28 @@ export class DainClient {
   }
 
   /* Admin functions */
-  public async initialize(quoteAssetMint: PublicKey): Promise<TransactionSignature | null> {
+  public async initialize(quoteAssetMint: PublicKey,): Promise<TransactionSignature | null> {
     const initializeIx = await this.getInitializeIx(quoteAssetMint);
-    const tx = new Transaction();
-    tx.add(initializeIx);
 
-    const signature = await executeTransaction(this.connection, tx.serialize(), this.sendOpts);
-    return signature;
+    const tx = await buildTransaction(
+      this.connection,
+      [initializeIx]
+    );
+
+    if (this.wallet && tx) {
+      const signature = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      return signature;
+    }
+    else {
+      return null;
+    }
   }
 
   public async getInitializeIx(quoteAssetMint: PublicKey): Promise<TransactionInstruction> {
     const initializeIx = await this.program.methods.initialize()
       .accounts({
         admin: this.state?.admin,
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         quoteAssetMint,
         rent: SYSVAR_RENT_PUBKEY,
         driftSigner: this.getSignerPublicKey(),
@@ -167,7 +177,7 @@ export class DainClient {
       nameBuffer
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         admin: this.state?.admin,
         oracle,
         perpMarket,
@@ -228,14 +238,14 @@ export class DainClient {
       nameBuffer,
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         admin: this.state?.admin,
         oracle,
         spotMarket,
         spotMarketMint: mint,
         spotMarketVault,
         insuranceFundVault,
-        driftSigner: getSignerPublicKey(this.programId),
+        driftSigner: this.getSignerPublicKey(),
         rent: SYSVAR_RENT_PUBKEY,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -268,7 +278,7 @@ export class DainClient {
     return await this.program.methods.initializeUserStats()
       .accounts({
         userStats: this.userStatsPublicKey,
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         authority: this.authority,
         payer: this.payer,
         rent: SYSVAR_RENT_PUBKEY,
@@ -286,7 +296,7 @@ export class DainClient {
       nameBuffer
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         user: userPda,
         userStats: this.userStatsPublicKey,
         authority: this.authority,
@@ -313,7 +323,7 @@ export class DainClient {
       reduceOnly,
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         spotMarketVault,
         user: userPda,
         userStats: this.getUserStatsPublicKey(),
@@ -340,7 +350,7 @@ export class DainClient {
       reduceOnly,
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         spotMarketVault,
         user: userPda,
         userStats: this.getUserStatsPublicKey(),
@@ -362,9 +372,9 @@ export class DainClient {
       null
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         user: userPda,
-        userStats: this.userStatsPublicKey,
+        userStats: this.getUserStatsPublicKey(),
         authority: this.authority,
       })
       .instruction();
@@ -382,7 +392,7 @@ export class DainClient {
       takerOrderId,
     )
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         user: userPda,
         userStats: this.userStatsPublicKey,
         authority: this.authority,
@@ -398,7 +408,7 @@ export class DainClient {
 
     return await this.program.methods.cancelOrder(orderId)
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         user: userPda,
         authority: this.authority,
       })
@@ -414,7 +424,7 @@ export class DainClient {
 
     return await this.program.methods.settlePnl(marketIndex)
       .accounts({
-        state: this.statePublicKey,
+        state: this.getStatePublicKey(),
         user: userPda,
         spotMarketVault,
         authority: this.authority,

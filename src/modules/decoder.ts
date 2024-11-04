@@ -1,6 +1,6 @@
-import { IDL } from "@/idls/drift";
-import { PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, UserStatsAccount } from "@/types";
 import { BorshCoder } from "@coral-xyz/anchor";
+import { IDL } from "../idls/drift";
+import { PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, UserStatsAccount } from "../types";
 
 export function decodeStateData(data: Buffer): StateAccount {
     const coder = new BorshCoder(IDL);

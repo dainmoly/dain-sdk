@@ -1,5 +1,5 @@
-import { DefaultOrderParams, OptionalOrderParams, OrderParams, OrderTriggerCondition, OrderType } from '@/types';
 import { BN } from '@coral-xyz/anchor';
+import { DefaultOrderParams, OptionalOrderParams, OrderParams, OrderTriggerCondition, OrderType } from '../types';
 
 export function getLimitOrderParams(
 	params: Omit<OptionalOrderParams, 'orderType'> & { price: BN }

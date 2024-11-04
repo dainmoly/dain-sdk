@@ -10,5 +10,3 @@ export const TOKEN_FAUCET_PROGRAM_ID = new PublicKey("V4v1mQiAdLz4qwckEb45WqHYce
 export const USDC_MINT = new PublicKey("8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2");
 export const BTC_MINT = new PublicKey("3BZPwbcqB5kKScF3TEXxwNfx5ipV13kbRVDvfVp5c6fv");
 export const PYUSD_MINT = new PublicKey("GLfF72ZCUnS6N9iDJw8kedHzd6WFVf3VbpwdKKy76FRk");
-
-export const RPC_URL = process.env.RPC_URL ?? 'https://api.devnet.solana.com';

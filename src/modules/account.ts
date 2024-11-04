@@ -1,7 +1,7 @@
 import { AccountMeta, PublicKey } from "@solana/web3.js";
 import { getPerpMarketPublicKey, getSpotMarketPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./pda";
 import { isVariant, unifyArray } from "./utils";
-import { PerpMarketAccount, SpotMarketAccount, UserAccount } from "@/types";
+import { PerpMarketAccount, SpotMarketAccount, UserAccount } from "../types";
 
 export const getRemainAccountsForPlaceOrder = (
   programId: PublicKey,

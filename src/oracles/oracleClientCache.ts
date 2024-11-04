@@ -1,9 +1,9 @@
-import { OracleClient } from './types';
-import { OracleSource } from '@/types';
 import { Connection } from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
+
 import { getOracleClient } from './oracleClient';
-import { Drift } from '@/idls/drift';
+import { Drift } from '../idls/drift';
+import { OracleSource, OracleClient } from '../types';
 
 export class OracleClientCache {
 	cache = new Map<string, OracleClient>();

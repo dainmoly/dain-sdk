@@ -1,8 +1,10 @@
 import { PublicKey } from "@solana/web3.js";
-import { BTC_MINT, MAX_NAME_LENGTH, PYUSD_MINT, USDC_MINT, ZERO } from "@/constants";
-import { PerpPosition, SpotPosition } from "@/types";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
+
+import { BTC_MINT, MAX_NAME_LENGTH, PYUSD_MINT, USDC_MINT, ZERO } from "../constants";
+import { PerpPosition, SpotPosition } from "../types";
+
 
 export function isSpotPositionAvailable(position: SpotPosition): boolean {
 	return position.scaledBalance.eq(ZERO) && position.openOrders === 0;

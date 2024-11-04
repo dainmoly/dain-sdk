@@ -1,16 +1,10 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { OracleClient, OraclePriceData } from './types';
 import { AnchorProvider, BN, IdlAccounts, Program } from '@coral-xyz/anchor';
-import {
-	ONE,
-	PRICE_PRECISION,
-	QUOTE_PRECISION,
-	TEN,
-} from '@/constants';
-import { PythSolanaReceiver as PythSolanaReceiverProgram } from "@/idls/pythSolanaReceiver";
-import pythSolanaReceiverIdl from '@/idls/pyth_solana_receiver.json';
 
-import { DRIFT_ORACLE_RECEIVER_ID } from '@/constants';
+import { OracleClient, OraclePriceData } from '../types';
+import { ONE, PRICE_PRECISION, QUOTE_PRECISION, TEN, DRIFT_ORACLE_RECEIVER_ID } from '../constants';
+import { PythSolanaReceiver as PythSolanaReceiverProgram } from "../idls/pythSolanaReceiver";
+import pythSolanaReceiverIdl from '../idls/pyth_solana_receiver.json';
 
 export type PriceUpdateAccount = IdlAccounts<PythSolanaReceiverProgram>["priceUpdateV2"];
 

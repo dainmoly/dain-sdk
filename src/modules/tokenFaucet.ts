@@ -17,7 +17,7 @@ import {
 	TransactionSignature,
 } from '@solana/web3.js';
 import tokenFaucet from '../idls/token_faucet.json';
-import { IWallet } from '@/types';
+import { IWallet } from '../types';
 
 export class TokenFaucet {
 	connection: Connection;

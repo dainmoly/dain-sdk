@@ -1,8 +1,8 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { OracleClient, OraclePriceData } from './types';
 import { Program } from '@coral-xyz/anchor';
-import { PrelaunchOracle } from '../types';
-import { Drift } from '@/idls/drift';
+
+import { Drift } from '../idls/drift';
+import { PrelaunchOracle, OraclePriceData, OracleClient } from '../types';
 
 export class PrelaunchOracleClient implements OracleClient {
 	private connection: Connection;
@@ -20,6 +20,8 @@ export class PrelaunchOracleClient implements OracleClient {
 		if (accountInfo) {
 			return this.getOraclePriceDataFromBuffer(accountInfo.data);
 		}
+
+		return undefined;
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {

@@ -1,12 +1,14 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { OracleClient, OraclePriceData } from './types';
-import { BN, Idl } from '@coral-xyz/anchor';
-import * as IDL from '@/idls/switchboard_on_demand_30.json';
-import { PRICE_PRECISION_EXP } from '@/constants';
+import { BN } from '@coral-xyz/anchor';
 import {
 	BorshAccountsCoder as BorshAccountsCoder30,
 	Idl as Idl30,
 } from '@coral-xyz/anchor-30';
+
+import { OracleClient, OraclePriceData } from '../types';
+import { PRICE_PRECISION_EXP } from '../constants';
+import * as IDL from '../idls/switchboard_on_demand_30.json';
+
 
 const SB_PRECISION_EXP = new BN(18);
 const SB_PRECISION = new BN(10).pow(SB_PRECISION_EXP.sub(PRICE_PRECISION_EXP));
@@ -40,6 +42,8 @@ export class SwitchboardOnDemandClient implements OracleClient {
 		if (accountInfo) {
 			return this.getOraclePriceDataFromBuffer(accountInfo.data);
 		}
+
+		return undefined;
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {

@@ -1,4 +1,4 @@
-import { Drift } from "@/idls/drift";
+import { Drift } from "../idls/drift";
 import { Program } from "@coral-xyz/anchor";
 import { SignerWalletAdapter } from "@solana/wallet-adapter-base";
 import { PublicKey } from "@solana/web3.js";

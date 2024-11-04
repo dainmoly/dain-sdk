@@ -1,16 +1,15 @@
 import { Connection } from '@solana/web3.js';
 import { BN, Program } from '@coral-xyz/anchor';
 
-import { Drift } from '@/idls/drift';
-import { OracleClient } from '@/oracles/types';
-import { PythClient } from '@/oracles/pythClient';
-import { QuoteAssetOracleClient } from '@/oracles/quoteAssetOracleClient';
-import { PrelaunchOracleClient } from '@/oracles/prelaunchOracleClient';
-import { SwitchboardClient } from '@/oracles/switchboardClient';
-import { PythPullClient } from '@/oracles/pythPullClient';
-import { SwitchboardOnDemandClient } from '@/oracles/switchboardOnDemandClient';
-import { OracleSource } from '@/types';
-import { isVariant } from '@/modules';
+import { Drift } from '../idls/drift';
+import { PythClient } from './pythClient';
+import { QuoteAssetOracleClient } from './quoteAssetOracleClient';
+import { PrelaunchOracleClient } from './prelaunchOracleClient';
+import { SwitchboardClient } from './switchboardClient';
+import { PythPullClient } from './pythPullClient';
+import { SwitchboardOnDemandClient } from './switchboardOnDemandClient';
+import { OracleSource, OracleClient } from '../types';
+import { isVariant } from '../modules';
 
 export function getOracleClient(
 	oracleSource: OracleSource,

@@ -1,13 +1,9 @@
 import { parsePriceData } from '@pythnetwork/client';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { OracleClient, OraclePriceData } from './types';
 import { BN } from '@coral-xyz/anchor';
-import {
-	ONE,
-	PRICE_PRECISION,
-	QUOTE_PRECISION,
-	TEN,
-} from '@/constants';
+
+import { OracleClient, OraclePriceData } from '../types';
+import { ONE, PRICE_PRECISION, QUOTE_PRECISION, TEN } from '../constants';
 
 export class PythClient implements OracleClient {
 	private connection: Connection;
@@ -31,6 +27,8 @@ export class PythClient implements OracleClient {
 		if (accountInfo) {
 			return this.getOraclePriceDataFromBuffer(accountInfo.data);
 		}
+
+		return undefined;
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {

@@ -1,7 +1,9 @@
 import { PublicKey } from '@solana/web3.js';
-import { OracleClient, OraclePriceData } from './types';
 import { BN } from '@coral-xyz/anchor';
-import { PRICE_PRECISION } from '@/constants';
+
+import { PRICE_PRECISION } from '../constants';
+import { OracleClient, OraclePriceData } from '../types';
+
 
 export const QUOTE_ORACLE_PRICE_DATA: OraclePriceData = {
 	price: PRICE_PRECISION,

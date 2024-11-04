@@ -1,8 +1,9 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { PRICE_PRECISION, TEN } from '@/constants';
-import { OracleClient, OraclePriceData } from './types';
-import * as IDL from '@/idls/switchboard.json';
 import { BorshAccountsCoder, BN, Idl } from '@coral-xyz/anchor';
+
+import { PRICE_PRECISION, TEN } from '../constants';
+import { OracleClient, OraclePriceData } from '../types';
+import * as IDL from '../idls/switchboard.json';
 
 type SwitchboardDecimal = {
 	scale: number;

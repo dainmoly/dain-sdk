@@ -1,15 +1,39 @@
-import { BlockhashWithExpiryBlockHeight, Connection, SendOptions, TransactionExpiredBlockheightExceededError } from "@solana/web3.js";
+import { BlockhashWithExpiryBlockHeight, ComputeBudgetProgram, Connection, SendOptions, Transaction, TransactionExpiredBlockheightExceededError, TransactionInstruction } from "@solana/web3.js";
 import promiseRetry from "promise-retry";
 import { delay } from "./modules";
+import { Wallet } from "./types";
+
+export const buildTransaction = async (
+  connection: Connection,
+  ixs: TransactionInstruction[],
+): Promise<Transaction | null> => {
+  const tx = new Transaction();
+  tx.instructions = [
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 1_000_000
+    }),
+    ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: 1_000
+    }),
+    ...ixs
+  ];
+
+  return tx;
+}
 
 export const executeTransaction = async (
   connection: Connection,
-  tx: Buffer,
+  tx: Transaction,
+  wallet: Wallet,
   sendOptions: SendOptions,
 ): Promise<string | null> => {
   const blockhashInfo = await connection.getLatestBlockhash(sendOptions.preflightCommitment);
 
-  const txid = await connection.sendRawTransaction(tx, sendOptions);
+  tx.feePayer = wallet.publicKey;
+  tx.recentBlockhash = blockhashInfo.blockhash;
+  const txBytes = (await wallet.signTransaction(tx)).serialize();
+
+  const txid = await connection.sendRawTransaction(txBytes, sendOptions);
 
   const controller = new AbortController();
   const abortSignal = controller.signal;
@@ -19,7 +43,7 @@ export const executeTransaction = async (
       await delay(1_000);
       if (abortSignal.aborted) return;
       try {
-        await connection.sendRawTransaction(tx, sendOptions);
+        await connection.sendRawTransaction(txBytes, sendOptions);
       } catch (e) {
         console.warn(`Failed to resend transaction: ${e}`);
       }
