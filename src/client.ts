@@ -5,7 +5,7 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { IDL, Drift } from "./idls/drift";
 import { AccountLoader } from "./accountLoader";
 import { buildTransaction, executeTransaction } from "./transaction";
-import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME } from "./constants";
+import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME, DEFAULT_USER_NAME } from "./constants";
 import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
 import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
 import { NodeWallet } from "./modules/nodeWallet";
@@ -281,6 +281,34 @@ export class DainClient {
   }
 
   /* User functions */
+  public async initializeUser(
+    subAccountId = 0,
+    name?: string,
+  ): Promise<TransactionSignature | null> {
+    const initializeIxs = [];
+
+    const [_, initializeUserIx] = await this.getInitializeUserIx(subAccountId, name);
+    if (subAccountId === 0) {
+      const initializeUserStateIx = await this.getInitializeUserStateIx();
+      initializeIxs.push(initializeUserStateIx);
+    }
+
+    initializeIxs.push(initializeUserIx);
+
+    const tx = await buildTransaction(
+      this.connection,
+      initializeIxs
+    );
+
+    if (this.wallet && tx) {
+      const signature = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      return signature;
+    }
+    else {
+      return null;
+    }
+  }
+
   public async getInitializeUserStateIx(): Promise<TransactionInstruction> {
     return await this.program.methods.initializeUserStats()
       .accounts({
@@ -294,11 +322,19 @@ export class DainClient {
       .instruction();
   }
 
-  public async getInitializeUserIx(subAccountId: number, name: string): Promise<TransactionInstruction> {
+  public async getInitializeUserIx(subAccountId: number, name?: string): Promise<[PublicKey, TransactionInstruction]> {
+    if (name === undefined) {
+      if (subAccountId === 0) {
+        name = DEFAULT_USER_NAME;
+      } else {
+        name = `Subaccount ${subAccountId + 1}`;
+      }
+    }
+
     const nameBuffer = encodeName(name);
     const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
 
-    return await this.program.methods.initializeUser(
+    const ix = await this.program.methods.initializeUser(
       subAccountId,
       nameBuffer
     )
@@ -312,6 +348,7 @@ export class DainClient {
         systemProgram: SystemProgram.programId,
       })
       .instruction();
+    return [userPda, ix];
   }
 
   public async getDepositIx(
