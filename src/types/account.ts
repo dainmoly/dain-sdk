@@ -64,6 +64,11 @@ export enum UserStatus {
     ADVANCED_LP = 8,
 }
 
+export class MarginMode {
+	static readonly DEFAULT = { default: {} };
+	static readonly HIGH_LEVERAGE = { highLeverage: {} };
+}
+
 export class ContractType {
     static readonly PERPETUAL = { perpetual: {} };
     static readonly FUTURE = { future: {} };
@@ -578,71 +583,74 @@ export type SpotMarketVaultDepositRecord = {
 };
 
 export type StateAccount = {
-    admin: PublicKey;
-    exchangeStatus: number;
-    whitelistMint: PublicKey;
-    discountMint: PublicKey;
-    oracleGuardRails: OracleGuardRails;
-    numberOfAuthorities: BN;
-    numberOfSubAccounts: BN;
-    numberOfMarkets: number;
-    numberOfSpotMarkets: number;
-    minPerpAuctionDuration: number;
-    defaultMarketOrderTimeInForce: number;
-    defaultSpotAuctionDuration: number;
-    liquidationMarginBufferRatio: number;
-    settlementDuration: number;
-    maxNumberOfSubAccounts: number;
-    signer: PublicKey;
-    signerNonce: number;
-    srmVault: PublicKey;
-    perpFeeStructure: FeeStructure;
-    spotFeeStructure: FeeStructure;
-    lpCooldownTime: BN;
-    initialPctToLiquidate: number;
-    liquidationDuration: number;
-    maxInitializeUserFee: number;
+	admin: PublicKey;
+	exchangeStatus: number;
+	whitelistMint: PublicKey;
+	discountMint: PublicKey;
+	oracleGuardRails: OracleGuardRails;
+	numberOfAuthorities: BN;
+	numberOfSubAccounts: BN;
+	numberOfMarkets: number;
+	numberOfSpotMarkets: number;
+	minPerpAuctionDuration: number;
+	defaultMarketOrderTimeInForce: number;
+	defaultSpotAuctionDuration: number;
+	liquidationMarginBufferRatio: number;
+	settlementDuration: number;
+	maxNumberOfSubAccounts: number;
+	signer: PublicKey;
+	signerNonce: number;
+	srmVault: PublicKey;
+	perpFeeStructure: FeeStructure;
+	spotFeeStructure: FeeStructure;
+	lpCooldownTime: BN;
+	initialPctToLiquidate: number;
+	liquidationDuration: number;
+	maxInitializeUserFee: number;
 };
 
 export type PerpMarketAccount = {
-    status: MarketStatus;
-    contractType: ContractType;
-    contractTier: ContractTier;
-    expiryTs: BN;
-    expiryPrice: BN;
-    marketIndex: number;
-    pubkey: PublicKey;
-    name: number[];
-    amm: AMM;
-    numberOfUsersWithBase: number;
-    numberOfUsers: number;
-    marginRatioInitial: number;
-    marginRatioMaintenance: number;
-    nextFillRecordId: BN;
-    nextFundingRateRecordId: BN;
-    nextCurveRecordId: BN;
-    pnlPool: PoolBalance;
-    liquidatorFee: number;
-    ifLiquidationFee: number;
-    imfFactor: number;
-    unrealizedPnlImfFactor: number;
-    unrealizedPnlMaxImbalance: BN;
-    unrealizedPnlInitialAssetWeight: number;
-    unrealizedPnlMaintenanceAssetWeight: number;
-    insuranceClaim: {
-        revenueWithdrawSinceLastSettle: BN;
-        maxRevenueWithdrawPerPeriod: BN;
-        lastRevenueWithdrawTs: BN;
-        quoteSettledInsurance: BN;
-        quoteMaxInsurance: BN;
-    };
-    quoteSpotMarketIndex: number;
-    feeAdjustment: number;
-    pausedOperations: number;
+	status: MarketStatus;
+	contractType: ContractType;
+	contractTier: ContractTier;
+	expiryTs: BN;
+	expiryPrice: BN;
+	marketIndex: number;
+	pubkey: PublicKey;
+	name: number[];
+	amm: AMM;
+	numberOfUsersWithBase: number;
+	numberOfUsers: number;
+	marginRatioInitial: number;
+	marginRatioMaintenance: number;
+	nextFillRecordId: BN;
+	nextFundingRateRecordId: BN;
+	nextCurveRecordId: BN;
+	pnlPool: PoolBalance;
+	liquidatorFee: number;
+	ifLiquidationFee: number;
+	imfFactor: number;
+	unrealizedPnlImfFactor: number;
+	unrealizedPnlMaxImbalance: BN;
+	unrealizedPnlInitialAssetWeight: number;
+	unrealizedPnlMaintenanceAssetWeight: number;
+	insuranceClaim: {
+		revenueWithdrawSinceLastSettle: BN;
+		maxRevenueWithdrawPerPeriod: BN;
+		lastRevenueWithdrawTs: BN;
+		quoteSettledInsurance: BN;
+		quoteMaxInsurance: BN;
+	};
+	quoteSpotMarketIndex: number;
+	feeAdjustment: number;
+	pausedOperations: number;
 
-    fuelBoostTaker: number;
-    fuelBoostMaker: number;
-    fuelBoostPosition: number;
+	fuelBoostTaker: number;
+	fuelBoostMaker: number;
+	fuelBoostPosition: number;
+
+	highLeverageMarginRatioInitial: number;
+	highLeverageMarginRatioMaintenance: number;
 };
 
 export type HistoricalOracleData = {
@@ -650,7 +658,7 @@ export type HistoricalOracleData = {
     lastOracleDelay: BN;
     lastOracleConf: BN;
     lastOraclePriceTwap: BN;
-    // lastOraclePriceTwap5Min: BN;
+    lastOraclePriceTwap5Min: BN;
     lastOraclePriceTwapTs: BN;
 };
 
@@ -658,7 +666,7 @@ export type HistoricalIndexData = {
     lastIndexBidPrice: BN;
     lastIndexAskPrice: BN;
     lastIndexPriceTwap: BN;
-    // lastIndexPriceTwap5Min: BN;
+    lastIndexPriceTwap5Min: BN;
     lastIndexPriceTwapTs: BN;
 };
 
@@ -759,11 +767,11 @@ export type PoolBalance = {
 export type AMM = {
     baseAssetReserve: BN;
     sqrtK: BN;
-    // cumulativeFundingRate: BN;
+    cumulativeFundingRate: BN;
     lastFundingRate: BN;
     lastFundingRateTs: BN;
     lastMarkPriceTwap: BN;
-    // lastMarkPriceTwap5Min: BN;
+    lastMarkPriceTwap5Min: BN;
     lastMarkPriceTwapTs: BN;
     lastTradeTs: BN;
 
@@ -779,7 +787,7 @@ export type AMM = {
     pegMultiplier: BN;
     cumulativeFundingRateLong: BN;
     cumulativeFundingRateShort: BN;
-    // last24HAvgFundingRate: BN;
+    last24HAvgFundingRate: BN;
     lastFundingRateShort: BN;
     lastFundingRateLong: BN;
 
@@ -836,7 +844,7 @@ export type AMM = {
     longIntensityVolume: BN;
     shortIntensityCount: number;
     shortIntensityVolume: BN;
-    // volume24H: BN;
+    volume24H: BN;
     minOrderSize: BN;
     maxPositionSize: BN;
 
@@ -934,6 +942,7 @@ export type UserAccount = {
     openAuctions: number;
     hasOpenAuction: boolean;
     lastFuelBonusUpdateTs: number;
+	marginMode: MarginMode;
 };
 
 export type SpotPosition = {
@@ -956,7 +965,7 @@ export type Order = {
     marketIndex: number;
     price: BN;
     baseAssetAmount: BN;
-    // quoteAssetAmount: BN;
+    quoteAssetAmount: BN;
     baseAssetAmountFilled: BN;
     quoteAssetAmountFilled: BN;
     direction: PositionDirection;

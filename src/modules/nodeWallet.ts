@@ -10,11 +10,10 @@ export class NodeWallet implements Wallet {
   /**
    * @param payer Keypair of the associated payer
    */
-  constructor(readonly payer: Keypair) {}
+  constructor(readonly payer: Keypair) { }
 
   /**
    * Factory for the local wallet.
-   * Makes use of the `MARGINFI_WALLET` env var, with fallback to `$HOME/.config/solana/id.json`.
    */
   static local(): NodeWallet {
     const process = require("process");
@@ -22,7 +21,7 @@ export class NodeWallet implements Wallet {
       Buffer.from(
         JSON.parse(
           require("fs").readFileSync(
-            process.env.MARGINFI_WALLET || require("path").join(require("os").homedir(), ".config/solana/id.json"),
+            process.env.DAIN_LOCAL_WALLET || require("path").join(require("os").homedir(), ".config/solana/id.json"),
             {
               encoding: "utf-8",
             }

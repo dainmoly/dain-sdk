@@ -6,9 +6,11 @@ import { IDL, Drift } from "./idls/drift";
 import { AccountLoader } from "./accountLoader";
 import { buildTransaction, executeTransaction } from "./transaction";
 import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME, DEFAULT_USER_NAME } from "./constants";
-import { AssetTier, ContractTier, DainConfig, DainProgram, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
-import { encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey } from "./modules";
+import { AssetTier, ContractTier, DainConfig, DainProgram, MarketType, OraclePriceData, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
+import { castNumberToSpotPrecision, encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey, isVariant } from "./modules";
 import { NodeWallet } from "./modules/nodeWallet";
+import { ORACLE_DEFAULT_KEY, QUOTE_ORACLE_PRICE_DATA } from "./oracles/quoteAssetOracleClient";
+import { User } from "./user";
 
 
 export class DainClient {
@@ -24,9 +26,10 @@ export class DainClient {
   readonly payer: PublicKey;
 
   state?: StateAccount;
-  perpMarkets?: PerpMarketAccount[];
-  spotMarkets?: SpotMarketAccount[];
-  users?: UserAccount[];
+  perpMarkets: Map<number, PerpMarketAccount>;
+  spotMarkets: Map<number, SpotMarketAccount>;
+  oracles: Map<string, OraclePriceData>;
+  users: Map<string, UserAccount>;
 
   public constructor(config: DainConfig, connection: Connection, wallet?: Wallet) {
     this.connection = connection;
@@ -41,6 +44,11 @@ export class DainClient {
     this.authority = wallet?.publicKey ?? PublicKey.default;
     this.payer = wallet?.publicKey ?? PublicKey.default;
     this.accountLoader = new AccountLoader(connection, this.program, this.confirmOpts.commitment);
+
+    this.spotMarkets = new Map<number, SpotMarketAccount>();
+    this.perpMarkets = new Map<number, PerpMarketAccount>();
+    this.oracles = new Map<string, OraclePriceData>();
+    this.users = new Map<string, UserAccount>();
   }
 
   /* Updaters */
@@ -74,6 +82,10 @@ export class DainClient {
     return this.statePublicKey;
   }
 
+  public getStateAccount(): StateAccount {
+    return this.state as StateAccount;
+  }
+
   userStatsPublicKey?: PublicKey;
   public getUserStatsPublicKey(): PublicKey {
     if (this.userStatsPublicKey) {
@@ -84,11 +96,39 @@ export class DainClient {
   }
 
   /* Fetch functions */
-  public async load() {
+  public async loadState() {
     this.state = await this.accountLoader.fetchState();
-    this.perpMarkets = await this.accountLoader.loadPerpMarkets();
-    this.spotMarkets = await this.accountLoader.loadSpotMarkets();
-    this.users = await this.accountLoader.loadUsers();
+  }
+
+  public async loadPerpMarkets() {
+    const perpMarkets = await this.accountLoader.loadPerpMarkets();
+    if (perpMarkets) {
+      for (const market of perpMarkets) {
+        this.perpMarkets.set(market.marketIndex, market);
+      }
+    }
+  }
+
+  public async loadSpotMarkets() {
+    const spotMarkets = await this.accountLoader.loadSpotMarkets();
+    if (spotMarkets) {
+      for (const market of spotMarkets) {
+        this.spotMarkets.set(market.marketIndex, market);
+      }
+    }
+  }
+
+  public async loadOracle(source: OracleSource, pubkey: PublicKey) {
+    const oracle = await this.accountLoader.fetchOracle(source, pubkey);
+    if (oracle) {
+      this.oracles.set(pubkey.toBase58(), oracle);
+    }
+  }
+
+  public async load() {
+    await this.loadState();
+    await this.loadPerpMarkets();
+    await this.loadSpotMarkets();
   }
 
   /* Admin functions */
@@ -312,7 +352,7 @@ export class DainClient {
   public async getInitializeUserStateIx(): Promise<TransactionInstruction> {
     return await this.program.methods.initializeUserStats()
       .accounts({
-        userStats: this.userStatsPublicKey,
+        userStats: this.getUserStatsPublicKey(),
         state: this.getStatePublicKey(),
         authority: this.authority,
         payer: this.payer,
@@ -341,7 +381,7 @@ export class DainClient {
       .accounts({
         state: this.getStatePublicKey(),
         user: userPda,
-        userStats: this.userStatsPublicKey,
+        userStats: this.getUserStatsPublicKey(),
         authority: this.authority,
         payer: this.payer,
         rent: SYSVAR_RENT_PUBKEY,
@@ -438,7 +478,7 @@ export class DainClient {
       .accounts({
         state: this.getStatePublicKey(),
         user: userPda,
-        userStats: this.userStatsPublicKey,
+        userStats: this.getUserStatsPublicKey(),
         authority: this.authority,
       })
       .instruction();
@@ -476,8 +516,132 @@ export class DainClient {
       .instruction();
   }
 
-  // Keeper functions
+  // Getter functions
+
+  public getPerpMarketAccount(
+    marketIndex: number
+  ): PerpMarketAccount {
+    const market = this.perpMarkets.get(marketIndex);
+    if (!market) {
+      throw new Error(`perpMarket #${marketIndex} not loaded`);
+    }
+
+    return market;
+  }
+
+  public getPerpMarketAccounts(): PerpMarketAccount[] {
+    const accounts = Object.values(this.perpMarkets)
+      .filter((value) => value !== undefined);
+
+    return accounts;
+  }
+
+  public getSpotMarketAccount(
+    marketIndex: number
+  ): SpotMarketAccount {
+    const market = this.spotMarkets.get(marketIndex);
+    if (!market) {
+      throw new Error(`spotMarket #${marketIndex} not loaded`);
+    }
+
+    return market;
+  }
+
+  public getSpotMarketAccounts(): SpotMarketAccount[] {
+    const accounts = Object.values(this.spotMarkets)
+      .filter((value) => value !== undefined);
+
+    return accounts;
+  }
+
+  public getOraclePriceData(
+    oracleString: string
+  ): OraclePriceData {
+    if (oracleString === ORACLE_DEFAULT_KEY) {
+      return QUOTE_ORACLE_PRICE_DATA;
+    }
+
+    const oracle = this.oracles.get(oracleString);
+    if (!oracle) {
+      throw new Error(`oracle #${oracleString} not loaded`);
+    }
+
+    return oracle;
+  }
+
+  public getOracleDataForPerpMarket(marketIndex: number): OraclePriceData {
+    const perpMarketAccount = this.getPerpMarketAccount(marketIndex);
+    return this.getOraclePriceData(perpMarketAccount.amm.oracle.toBase58());
+  }
+
+  public getOracleDataForSpotMarket(marketIndex: number): OraclePriceData {
+    const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
+    return this.getOraclePriceData(spotMarketAccount.oracle.toBase58());
+  }
 
   // Helpers
 
+  /**
+   * Calculates taker / maker fee (as a percentage, e.g. .001 = 10 basis points) for particular marketType
+   * @param marketType
+   * @param positionMarketIndex
+   * @returns : {takerFee: number, makerFee: number} Precision None
+   */
+  public getMarketFees(
+    marketType: MarketType,
+    marketIndex?: number,
+    user?: User
+  ) {
+    let feeTier;
+    if (user) {
+      feeTier = user.getUserFeeTier(marketType);
+    } else {
+      const state = this.getStateAccount();
+      feeTier = isVariant(marketType, 'perp')
+        ? state.perpFeeStructure.feeTiers[0]
+        : state.spotFeeStructure.feeTiers[0];
+    }
+
+    let takerFee = feeTier.feeNumerator / feeTier.feeDenominator;
+    let makerFee =
+      feeTier.makerRebateNumerator / feeTier.makerRebateDenominator;
+
+    if (marketIndex !== undefined) {
+      let marketAccount = null;
+      if (isVariant(marketType, 'perp')) {
+        marketAccount = this.getPerpMarketAccount(marketIndex);
+      } else {
+        marketAccount = this.getSpotMarketAccount(marketIndex);
+      }
+
+      if (!marketAccount) {
+        throw new Error(`market #${marketIndex} not loaded`);
+      }
+
+      let feeAdjustment = 0;
+
+      let takeFeeAdjustment = 0;
+      if (user && user.isHighLeverageMode()) {
+        takeFeeAdjustment = 100;
+      }
+
+      if (isVariant(marketType, 'perp')) {
+        feeAdjustment = (marketAccount as PerpMarketAccount).feeAdjustment;
+        takeFeeAdjustment = feeAdjustment;
+      }
+
+      takerFee += (takerFee * takeFeeAdjustment) / 100;
+      makerFee += (makerFee * feeAdjustment) / 100;
+    }
+
+    return {
+      takerFee,
+      makerFee,
+    };
+  }
+
+  public convertToSpotPrecision(marketIndex: number, amount: BN | number): BN {
+    const spotMarket = this.getSpotMarketAccount(marketIndex);
+    return castNumberToSpotPrecision(amount, spotMarket);
+  }
 }

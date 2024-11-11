@@ -2,22 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
 
-import { BTC_MINT, MAX_NAME_LENGTH, PYUSD_MINT, USDC_MINT, ZERO } from "../constants";
-import { PerpPosition, SpotPosition } from "../types";
-
-
-export function isSpotPositionAvailable(position: SpotPosition): boolean {
-	return position.scaledBalance.eq(ZERO) && position.openOrders === 0;
-}
-
-export function positionIsAvailable(position: PerpPosition): boolean {
-	return (
-		position.baseAssetAmount.eq(ZERO) &&
-		position.openOrders === 0 &&
-		position.quoteAssetAmount.eq(ZERO) &&
-		position.lpShares.eq(ZERO)
-	);
-}
+import { BTC_MINT, MAX_NAME_LENGTH, PYUSD_MINT, USDC_MINT } from "../constants";
 
 export const validateAddress = (address: string): boolean => {
 	try {

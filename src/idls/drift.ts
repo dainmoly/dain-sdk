@@ -1,5 +1,5 @@
 export type Drift = {
-  "version": "2.96.0",
+  "version": "2.99.0",
   "name": "drift",
   "instructions": [
     {
@@ -74,6 +74,78 @@ export type Drift = {
           "name": "authority",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeRfqUser",
+      "accounts": [
+        {
+          "name": "rfqUser",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeSwiftUserOrders",
+      "accounts": [
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "payer",
@@ -609,7 +681,114 @@ export type Drift = {
       ]
     },
     {
+      "name": "placeAndMakeSwiftPerpOrder",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "taker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "takerStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "takerSwiftUserOrders",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "OrderParams"
+          }
+        },
+        {
+          "name": "swiftOrderUuid",
+          "type": {
+            "array": [
+              "u8",
+              8
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "placeSwiftTakerOrder",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "ixSysvar",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "the supplied Sysvar could be anything else.",
+            "The Instruction Sysvar has not been implemented",
+            "in the Anchor framework yet, so this is the safe approach."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "swiftMessageBytes",
+          "type": "bytes"
+        },
+        {
+          "name": "swiftOrderParamsMessageBytes",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "placeAndMatchRfqOrders",
       "accounts": [
         {
           "name": "state",
@@ -644,20 +823,11 @@ export type Drift = {
       ],
       "args": [
         {
-          "name": "swiftMessageBytes",
-          "type": "bytes"
-        },
-        {
-          "name": "swiftOrderParamsMessageBytes",
-          "type": "bytes"
-        },
-        {
-          "name": "swiftMessageSignature",
+          "name": "rfqMatches",
           "type": {
-            "array": [
-              "u8",
-              64
-            ]
+            "vec": {
+              "defined": "RFQMatch"
+            }
           }
         }
       ]
@@ -1253,6 +1423,32 @@ export type Drift = {
       "args": []
     },
     {
+      "name": "deleteSwiftUserOrders",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "state",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "reclaimRent",
       "accounts": [
         {
@@ -1572,6 +1768,27 @@ export type Drift = {
           "name": "user",
           "isMut": true,
           "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "updateUserStatsReferrerStatus",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
         },
         {
           "name": "userStats",
@@ -6765,6 +6982,29 @@ export type Drift = {
       }
     },
     {
+      "name": "rfqUser",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userPubkey",
+            "type": "publicKey"
+          },
+          {
+            "name": "rfqOrderData",
+            "type": {
+              "array": [
+                {
+                  "defined": "RFQOrderId"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "spotMarket",
       "type": {
         "kind": "struct",
@@ -7386,6 +7626,29 @@ export type Drift = {
       }
     },
     {
+      "name": "swiftUserOrders",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userPubkey",
+            "type": "publicKey"
+          },
+          {
+            "name": "swiftOrderData",
+            "type": {
+              "array": [
+                {
+                  "defined": "SwiftOrderId"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "user",
       "type": {
         "kind": "struct",
@@ -7742,11 +8005,13 @@ export type Drift = {
             "type": "u16"
           },
           {
-            "name": "isReferrer",
+            "name": "referrerStatus",
             "docs": [
-              "Whether the user is a referrer. Sub account 0 can not be deleted if user is a referrer"
+              "Flags for referrer status:",
+              "First bit (LSB): 1 if user is a referrer, 0 otherwise",
+              "Second bit: 1 if user was referred, 0 otherwise"
             ],
-            "type": "bool"
+            "type": "u8"
           },
           {
             "name": "disableUpdatePerpBidAskTwap",
@@ -8348,6 +8613,15 @@ export type Drift = {
         "kind": "struct",
         "fields": [
           {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
             "name": "swiftOrderSignature",
             "type": {
               "array": [
@@ -8373,10 +8647,6 @@ export type Drift = {
             "type": {
               "defined": "OrderParams"
             }
-          },
-          {
-            "name": "expectedOrderId",
-            "type": "i32"
           },
           {
             "name": "subAccountId",
@@ -8413,6 +8683,109 @@ export type Drift = {
           {
             "name": "baseAssetAmount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMakerOrderParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "subAccountId",
+            "type": "u16"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "marketType",
+            "type": {
+              "defined": "MarketType"
+            }
+          },
+          {
+            "name": "baseAssetAmount",
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "direction",
+            "type": {
+              "defined": "PositionDirection"
+            }
+          },
+          {
+            "name": "maxTs",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMakerMessage",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "orderParams",
+            "type": {
+              "defined": "RFQMakerOrderParams"
+            }
+          },
+          {
+            "name": "signature",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMatch",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "baseAssetAmount",
+            "type": "u64"
+          },
+          {
+            "name": "makerOrderParams",
+            "type": {
+              "defined": "RFQMakerOrderParams"
+            }
+          },
+          {
+            "name": "makerSignature",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -9237,6 +9610,27 @@ export type Drift = {
       }
     },
     {
+      "name": "RFQOrderId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "maxTs",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "InsuranceFund",
       "type": {
         "kind": "struct",
@@ -9429,6 +9823,31 @@ export type Drift = {
           {
             "name": "timeBasedRewardLowerBound",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwiftOrderId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "maxSlot",
+            "type": "u64"
+          },
+          {
+            "name": "orderId",
+            "type": "u32"
           }
         ]
       }
@@ -10332,10 +10751,16 @@ export type Drift = {
             "name": "PlaceAndMake"
           },
           {
-            "name": "PlaceAndTake"
+            "name": "PlaceAndTake",
+            "fields": [
+              "bool"
+            ]
           },
           {
             "name": "Liquidation"
+          },
+          {
+            "name": "RFQ"
           }
         ]
       }
@@ -10525,6 +10950,9 @@ export type Drift = {
           },
           {
             "name": "Liquidation"
+          },
+          {
+            "name": "AmmImmediateFill"
           }
         ]
       }
@@ -10668,6 +11096,23 @@ export type Drift = {
       }
     },
     {
+      "name": "AMMAvailability",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Immediate"
+          },
+          {
+            "name": "AfterMinDuration"
+          },
+          {
+            "name": "Unavailable"
+          }
+        ]
+      }
+    },
+    {
       "name": "SettlePnlMode",
       "type": {
         "kind": "enum",
@@ -10757,6 +11202,9 @@ export type Drift = {
           },
           {
             "name": "SettlePnlPaused"
+          },
+          {
+            "name": "AmmImmediateFillPaused"
           }
         ]
       }
@@ -10868,6 +11316,20 @@ export type Drift = {
           },
           {
             "name": "Perp"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferrerStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "IsReferrer"
+          },
+          {
+            "name": "IsReferred"
           }
         ]
       }
@@ -11290,6 +11752,53 @@ export type Drift = {
         {
           "name": "marketIndex",
           "type": "u16",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SwiftOrderRecord",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "hash",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "matchingOrderParams",
+          "type": {
+            "defined": "OrderParams"
+          },
+          "index": false
+        },
+        {
+          "name": "userOrderId",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "swiftOrderMaxSlot",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "swiftOrderUuid",
+          "type": {
+            "array": [
+              "u8",
+              8
+            ]
+          },
+          "index": false
+        },
+        {
+          "name": "ts",
+          "type": "i64",
           "index": false
         }
       ]
@@ -13383,12 +13892,67 @@ export type Drift = {
       "code": 6290,
       "name": "InvalidHighLeverageModeConfig",
       "msg": "Invalid High Leverage Mode Config"
+    },
+    {
+      "code": 6291,
+      "name": "InvalidRFQUserAccount",
+      "msg": "Invalid RFQ User Account"
+    },
+    {
+      "code": 6292,
+      "name": "RFQUserAccountWrongMutability",
+      "msg": "RFQUserAccount should be mutable"
+    },
+    {
+      "code": 6293,
+      "name": "RFQUserAccountFull",
+      "msg": "RFQUserAccount has too many active RFQs"
+    },
+    {
+      "code": 6294,
+      "name": "RFQOrderNotFilled",
+      "msg": "RFQ order not filled as expected"
+    },
+    {
+      "code": 6295,
+      "name": "InvalidRFQOrder",
+      "msg": "RFQ orders must be jit makers"
+    },
+    {
+      "code": 6296,
+      "name": "InvalidRFQMatch",
+      "msg": "RFQ matches must be valid"
+    },
+    {
+      "code": 6297,
+      "name": "InvalidSwiftUserAccount",
+      "msg": "Invalid swift user account"
+    },
+    {
+      "code": 6298,
+      "name": "SwiftUserAccountWrongMutability",
+      "msg": "Swift account wrong mutability"
+    },
+    {
+      "code": 6299,
+      "name": "SwiftUserOrdersAccountFull",
+      "msg": "SwiftUserAccount has too many active orders"
+    },
+    {
+      "code": 6300,
+      "name": "SwiftOrderDoesNotExist",
+      "msg": "Order with swift uuid does not exist"
+    },
+    {
+      "code": 6301,
+      "name": "InvalidSwiftOrderId",
+      "msg": "Swift order id cannot be 0s"
     }
   ]
 };
 
 export const IDL: Drift = {
-  "version": "2.96.0",
+  "version": "2.99.0",
   "name": "drift",
   "instructions": [
     {
@@ -13463,6 +14027,78 @@ export const IDL: Drift = {
           "name": "authority",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeRfqUser",
+      "accounts": [
+        {
+          "name": "rfqUser",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeSwiftUserOrders",
+      "accounts": [
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "payer",
@@ -13998,7 +14634,114 @@ export const IDL: Drift = {
       ]
     },
     {
+      "name": "placeAndMakeSwiftPerpOrder",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "taker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "takerStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "takerSwiftUserOrders",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "OrderParams"
+          }
+        },
+        {
+          "name": "swiftOrderUuid",
+          "type": {
+            "array": [
+              "u8",
+              8
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "placeSwiftTakerOrder",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "ixSysvar",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "the supplied Sysvar could be anything else.",
+            "The Instruction Sysvar has not been implemented",
+            "in the Anchor framework yet, so this is the safe approach."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "swiftMessageBytes",
+          "type": "bytes"
+        },
+        {
+          "name": "swiftOrderParamsMessageBytes",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "placeAndMatchRfqOrders",
       "accounts": [
         {
           "name": "state",
@@ -14033,20 +14776,11 @@ export const IDL: Drift = {
       ],
       "args": [
         {
-          "name": "swiftMessageBytes",
-          "type": "bytes"
-        },
-        {
-          "name": "swiftOrderParamsMessageBytes",
-          "type": "bytes"
-        },
-        {
-          "name": "swiftMessageSignature",
+          "name": "rfqMatches",
           "type": {
-            "array": [
-              "u8",
-              64
-            ]
+            "vec": {
+              "defined": "RFQMatch"
+            }
           }
         }
       ]
@@ -14642,6 +15376,32 @@ export const IDL: Drift = {
       "args": []
     },
     {
+      "name": "deleteSwiftUserOrders",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "swiftUserOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "state",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "reclaimRent",
       "accounts": [
         {
@@ -14961,6 +15721,27 @@ export const IDL: Drift = {
           "name": "user",
           "isMut": true,
           "isSigner": false
+        },
+        {
+          "name": "userStats",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "updateUserStatsReferrerStatus",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
         },
         {
           "name": "userStats",
@@ -20154,6 +20935,29 @@ export const IDL: Drift = {
       }
     },
     {
+      "name": "rfqUser",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userPubkey",
+            "type": "publicKey"
+          },
+          {
+            "name": "rfqOrderData",
+            "type": {
+              "array": [
+                {
+                  "defined": "RFQOrderId"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "spotMarket",
       "type": {
         "kind": "struct",
@@ -20775,6 +21579,29 @@ export const IDL: Drift = {
       }
     },
     {
+      "name": "swiftUserOrders",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userPubkey",
+            "type": "publicKey"
+          },
+          {
+            "name": "swiftOrderData",
+            "type": {
+              "array": [
+                {
+                  "defined": "SwiftOrderId"
+                },
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "user",
       "type": {
         "kind": "struct",
@@ -21131,11 +21958,13 @@ export const IDL: Drift = {
             "type": "u16"
           },
           {
-            "name": "isReferrer",
+            "name": "referrerStatus",
             "docs": [
-              "Whether the user is a referrer. Sub account 0 can not be deleted if user is a referrer"
+              "Flags for referrer status:",
+              "First bit (LSB): 1 if user is a referrer, 0 otherwise",
+              "Second bit: 1 if user was referred, 0 otherwise"
             ],
-            "type": "bool"
+            "type": "u8"
           },
           {
             "name": "disableUpdatePerpBidAskTwap",
@@ -21737,6 +22566,15 @@ export const IDL: Drift = {
         "kind": "struct",
         "fields": [
           {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
             "name": "swiftOrderSignature",
             "type": {
               "array": [
@@ -21762,10 +22600,6 @@ export const IDL: Drift = {
             "type": {
               "defined": "OrderParams"
             }
-          },
-          {
-            "name": "expectedOrderId",
-            "type": "i32"
           },
           {
             "name": "subAccountId",
@@ -21802,6 +22636,109 @@ export const IDL: Drift = {
           {
             "name": "baseAssetAmount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMakerOrderParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "subAccountId",
+            "type": "u16"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "marketType",
+            "type": {
+              "defined": "MarketType"
+            }
+          },
+          {
+            "name": "baseAssetAmount",
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "direction",
+            "type": {
+              "defined": "PositionDirection"
+            }
+          },
+          {
+            "name": "maxTs",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMakerMessage",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "orderParams",
+            "type": {
+              "defined": "RFQMakerOrderParams"
+            }
+          },
+          {
+            "name": "signature",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RFQMatch",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "baseAssetAmount",
+            "type": "u64"
+          },
+          {
+            "name": "makerOrderParams",
+            "type": {
+              "defined": "RFQMakerOrderParams"
+            }
+          },
+          {
+            "name": "makerSignature",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -22626,6 +23563,27 @@ export const IDL: Drift = {
       }
     },
     {
+      "name": "RFQOrderId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "maxTs",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "InsuranceFund",
       "type": {
         "kind": "struct",
@@ -22818,6 +23776,31 @@ export const IDL: Drift = {
           {
             "name": "timeBasedRewardLowerBound",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwiftOrderId",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "uuid",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "maxSlot",
+            "type": "u64"
+          },
+          {
+            "name": "orderId",
+            "type": "u32"
           }
         ]
       }
@@ -23721,10 +24704,16 @@ export const IDL: Drift = {
             "name": "PlaceAndMake"
           },
           {
-            "name": "PlaceAndTake"
+            "name": "PlaceAndTake",
+            "fields": [
+              "bool"
+            ]
           },
           {
             "name": "Liquidation"
+          },
+          {
+            "name": "RFQ"
           }
         ]
       }
@@ -23914,6 +24903,9 @@ export const IDL: Drift = {
           },
           {
             "name": "Liquidation"
+          },
+          {
+            "name": "AmmImmediateFill"
           }
         ]
       }
@@ -24057,6 +25049,23 @@ export const IDL: Drift = {
       }
     },
     {
+      "name": "AMMAvailability",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Immediate"
+          },
+          {
+            "name": "AfterMinDuration"
+          },
+          {
+            "name": "Unavailable"
+          }
+        ]
+      }
+    },
+    {
       "name": "SettlePnlMode",
       "type": {
         "kind": "enum",
@@ -24146,6 +25155,9 @@ export const IDL: Drift = {
           },
           {
             "name": "SettlePnlPaused"
+          },
+          {
+            "name": "AmmImmediateFillPaused"
           }
         ]
       }
@@ -24257,6 +25269,20 @@ export const IDL: Drift = {
           },
           {
             "name": "Perp"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferrerStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "IsReferrer"
+          },
+          {
+            "name": "IsReferred"
           }
         ]
       }
@@ -24679,6 +25705,53 @@ export const IDL: Drift = {
         {
           "name": "marketIndex",
           "type": "u16",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SwiftOrderRecord",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "hash",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "matchingOrderParams",
+          "type": {
+            "defined": "OrderParams"
+          },
+          "index": false
+        },
+        {
+          "name": "userOrderId",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "swiftOrderMaxSlot",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "swiftOrderUuid",
+          "type": {
+            "array": [
+              "u8",
+              8
+            ]
+          },
+          "index": false
+        },
+        {
+          "name": "ts",
+          "type": "i64",
           "index": false
         }
       ]
@@ -26772,6 +27845,61 @@ export const IDL: Drift = {
       "code": 6290,
       "name": "InvalidHighLeverageModeConfig",
       "msg": "Invalid High Leverage Mode Config"
+    },
+    {
+      "code": 6291,
+      "name": "InvalidRFQUserAccount",
+      "msg": "Invalid RFQ User Account"
+    },
+    {
+      "code": 6292,
+      "name": "RFQUserAccountWrongMutability",
+      "msg": "RFQUserAccount should be mutable"
+    },
+    {
+      "code": 6293,
+      "name": "RFQUserAccountFull",
+      "msg": "RFQUserAccount has too many active RFQs"
+    },
+    {
+      "code": 6294,
+      "name": "RFQOrderNotFilled",
+      "msg": "RFQ order not filled as expected"
+    },
+    {
+      "code": 6295,
+      "name": "InvalidRFQOrder",
+      "msg": "RFQ orders must be jit makers"
+    },
+    {
+      "code": 6296,
+      "name": "InvalidRFQMatch",
+      "msg": "RFQ matches must be valid"
+    },
+    {
+      "code": 6297,
+      "name": "InvalidSwiftUserAccount",
+      "msg": "Invalid swift user account"
+    },
+    {
+      "code": 6298,
+      "name": "SwiftUserAccountWrongMutability",
+      "msg": "Swift account wrong mutability"
+    },
+    {
+      "code": 6299,
+      "name": "SwiftUserOrdersAccountFull",
+      "msg": "SwiftUserAccount has too many active orders"
+    },
+    {
+      "code": 6300,
+      "name": "SwiftOrderDoesNotExist",
+      "msg": "Order with swift uuid does not exist"
+    },
+    {
+      "code": 6301,
+      "name": "InvalidSwiftOrderId",
+      "msg": "Swift order id cannot be 0s"
     }
   ]
 };

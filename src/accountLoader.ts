@@ -1,14 +1,16 @@
 import { BorshCoder, ProgramAccount } from "@coral-xyz/anchor";
 import { Commitment, Connection, PublicKey } from "@solana/web3.js";
-import { DainProgram, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount } from "./types";
+import { DainProgram, OraclePriceData, OracleSource, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, UserStatsAccount } from "./types";
 import { IDL } from "./idls/drift";
 import { getStateAccountPublicKey } from "./modules";
+import { OracleClientCache } from "./oracles/oracleClientCache";
 
 export class AccountLoader {
   connection: Connection;
   program: DainProgram;
   commitment?: Commitment;
   coder: BorshCoder;
+  oracleClientCache = new OracleClientCache();
 
   public constructor(
     connection: Connection,
@@ -90,6 +92,29 @@ export class AccountLoader {
     if (data) {
       const user = this.coder.accounts.decode("user", data) as UserAccount;
       return user;
+    }
+
+    return undefined;
+  }
+
+  async fetchUserStats(pubkey: PublicKey): Promise<UserStatsAccount | undefined> {
+    const data = await this.fetchAccount(pubkey);
+    if (data) {
+      const userStats = this.coder.accounts.decode("userStats", data) as UserStatsAccount;
+      return userStats;
+    }
+
+    return undefined;
+  }
+
+  async fetchOracle(source: OracleSource, pubkey: PublicKey): Promise<OraclePriceData | undefined> {
+    const data = await this.fetchAccount(pubkey);
+    if (data) {
+      const oracleClient = this.oracleClientCache.get(source, this.connection, this.program);
+      if (oracleClient) {
+        const oracle = oracleClient.getOraclePriceDataFromBuffer(data);
+        return oracle;
+      }
     }
 
     return undefined;
