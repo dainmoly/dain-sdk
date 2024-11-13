@@ -6,3 +6,4 @@ export * from "./utils";
 export * from "./account";
 export * from "./assert";
 export * from "./math";
+export * from "./nodeWallet";
