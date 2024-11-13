@@ -12,46 +12,6 @@ export class NodeWallet implements Wallet {
    */
   constructor(readonly payer: Keypair) { }
 
-  /**
-   * Factory for the local wallet.
-   */
-  static local(): NodeWallet {
-    const process = require("process");
-    const payer = Keypair.fromSecretKey(
-      Buffer.from(
-        JSON.parse(
-          require("fs").readFileSync(
-            process.env.DAIN_LOCAL_WALLET || require("path").join(require("os").homedir(), ".config/solana/id.json"),
-            {
-              encoding: "utf-8",
-            }
-          )
-        )
-      )
-    );
-    return new NodeWallet(payer);
-  }
-
-  /**
-   * Factory for the Anchor local wallet.
-   */
-  static anchor(): NodeWallet {
-    const process = require("process");
-    if (!process.env.ANCHOR_WALLET || process.env.ANCHOR_WALLET === "") {
-      throw new Error("expected environment variable `ANCHOR_WALLET` is not set.");
-    }
-    const payer = Keypair.fromSecretKey(
-      Buffer.from(
-        JSON.parse(
-          require("fs").readFileSync(process.env.ANCHOR_WALLET, {
-            encoding: "utf-8",
-          })
-        )
-      )
-    );
-    return new NodeWallet(payer);
-  }
-
   async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
     if ("version" in tx) {
       tx.sign([this.payer]);
