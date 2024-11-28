@@ -1,20 +1,21 @@
 import { AnchorProvider, BN, Program } from "@coral-xyz/anchor";
-import { ConfirmOptions, Connection, Keypair, PublicKey, SendOptions, SystemProgram, SYSVAR_RENT_PUBKEY, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ConfirmOptions, Connection, Keypair, PublicKey, SendOptions, SystemProgram, TransactionSignature } from "@solana/web3.js";
 
 import { IDL, Drift } from "./idls/drift";
 import { AccountLoader } from "./accountLoader";
-import { buildTransaction, executeTransaction } from "./transaction";
-import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME, DEFAULT_USER_NAME } from "./constants";
-import { AssetTier, ContractTier, DainConfig, DainProgram, MarketType, OraclePriceData, OracleSource, OrderParams, PerpMarketAccount, SpotMarketAccount, StateAccount, UserAccount, Wallet } from "./types";
-import { castNumberToSpotPrecision, encodeName, getInsuranceFundVaultPublicKey, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getSpotMarketVaultPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserStatsAccountPublicKey, isVariant } from "./modules";
+import { buildTransaction, executeTransaction } from "./modules/transaction";
+import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME, SPOT_MARKET_RATE_PRECISION, SPOT_MARKET_WEIGHT_PRECISION, QUOTE_SPOT_MARKET_INDEX, WSOL_MINT } from "./constants";
+import { AssetTier, ContractTier, DainConfig, DainProgram, MakerInfo, MarketType, OptionalOrderParams, OraclePriceData, OracleSource, PerpMarketAccount, RemainingAccountParams, SpotMarketAccount, StateAccount, TakerInfo, UserStatsAccount, Wallet } from "./types";
+import { castNumberToSpotPrecision, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getStateAccountPublicKey, getUserMapKey, getUserStatsAccountPublicKey, isVariant } from "./modules";
 import { NodeWallet } from "./modules/nodeWallet";
 import { ORACLE_DEFAULT_KEY, QUOTE_ORACLE_PRICE_DATA } from "./oracles/quoteAssetOracleClient";
 import { User } from "./user";
+import { getCancelOrderIx, getDepositIx, getInitializeIx, getInitializePerpMarketIx, getInitializeSpotMarketIx, getInitializeUserIx, getInitializeUserStateIx, getPlaceAndMakeSpotOrderIx, getPlaceAndTakePerpOrderIx, getPlaceAndTakeSpotOrderIx, getSettlePnlIx, getWithdrawIx } from "./instruction";
+import { createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createSyncNativeInstruction, getAccount, NATIVE_MINT } from "@solana/spl-token";
 
 
 export class DainClient {
-  connection: Connection;
+  public connection: Connection;
   programId: PublicKey;
   program: DainProgram;
   wallet?: Wallet;
@@ -22,14 +23,13 @@ export class DainClient {
   confirmOpts: ConfirmOptions;
   accountLoader: AccountLoader;
 
+  state?: StateAccount;
+  users = new Map<string, User>();
+  userStats?: UserStatsAccount;
+  activeSubAccountId: number;
+
   readonly authority: PublicKey;
   readonly payer: PublicKey;
-
-  state?: StateAccount;
-  perpMarkets: Map<number, PerpMarketAccount>;
-  spotMarkets: Map<number, SpotMarketAccount>;
-  oracles: Map<string, OraclePriceData>;
-  users: Map<string, UserAccount>;
 
   public constructor(config: DainConfig, connection: Connection, wallet?: Wallet) {
     this.connection = connection;
@@ -44,11 +44,7 @@ export class DainClient {
     this.authority = wallet?.publicKey ?? PublicKey.default;
     this.payer = wallet?.publicKey ?? PublicKey.default;
     this.accountLoader = new AccountLoader(connection, this.program, this.confirmOpts.commitment);
-
-    this.spotMarkets = new Map<number, SpotMarketAccount>();
-    this.perpMarkets = new Map<number, PerpMarketAccount>();
-    this.oracles = new Map<string, OraclePriceData>();
-    this.users = new Map<string, UserAccount>();
+    this.activeSubAccountId = config.activeSubAccountId ?? 0;
   }
 
   /* Updaters */
@@ -101,28 +97,50 @@ export class DainClient {
   }
 
   public async loadPerpMarkets() {
-    const perpMarkets = await this.accountLoader.loadPerpMarkets();
-    if (perpMarkets) {
-      for (const market of perpMarkets) {
-        this.perpMarkets.set(market.marketIndex, market);
-      }
-    }
+    await this.accountLoader.loadPerpMarkets();
   }
 
   public async loadSpotMarkets() {
-    const spotMarkets = await this.accountLoader.loadSpotMarkets();
-    if (spotMarkets) {
-      for (const market of spotMarkets) {
-        this.spotMarkets.set(market.marketIndex, market);
-      }
-    }
+    await this.accountLoader.loadSpotMarkets();
   }
 
   public async loadOracle(source: OracleSource, pubkey: PublicKey) {
-    const oracle = await this.accountLoader.fetchOracle(source, pubkey);
-    if (oracle) {
-      this.oracles.set(pubkey.toBase58(), oracle);
+    await this.accountLoader.loadOracle(source, pubkey);
+  }
+
+  public async loadPerpMarket(marketIndex: number) {
+    const pubkey = getPerpMarketPublicKey(this.programId, marketIndex);
+    await this.accountLoader.loadPerpMarket(pubkey);
+  }
+
+  public async loadSpotMarket(marketIndex: number) {
+    const pubkey = getSpotMarketPublicKey(this.programId, marketIndex);
+    await this.accountLoader.loadSpotMarket(pubkey);
+  }
+
+  public getUser(subAccountId: number, authority?: PublicKey): User {
+    subAccountId = subAccountId ?? this.activeSubAccountId;
+    authority = authority ?? this.authority;
+    const userMapKey = getUserMapKey(subAccountId, authority);
+
+    const user = this.users.get(userMapKey);
+    if (!user) {
+      throw new Error(`Client has no user for user id ${userMapKey}`);
     }
+
+    return user;
+  }
+
+  public hasUser(subAccountId?: number, authority?: PublicKey): boolean {
+    subAccountId = subAccountId ?? this.activeSubAccountId;
+    authority = authority ?? this.authority;
+    const userMapKey = getUserMapKey(subAccountId, authority);
+
+    return this.users.has(userMapKey);
+  }
+
+  public getUsers(): User[] {
+    return [...this.users.values()];
   }
 
   public async load() {
@@ -133,47 +151,103 @@ export class DainClient {
 
   /* Admin functions */
   public async initialize(quoteAssetMint: PublicKey,): Promise<TransactionSignature | null> {
-    const initializeIx = await this.getInitializeIx(quoteAssetMint);
+    const initializeIx = await getInitializeIx(this, quoteAssetMint);
 
     const tx = await buildTransaction(
-      this.connection,
       [initializeIx]
     );
 
     if (this.wallet && tx) {
-      const signature = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
-      return signature;
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        await Promise.all([
+          this.loadState(),
+        ]);
+
+        return ret.txSig;
+      }
     }
-    else {
-      return null;
-    }
+
+    return null;
   }
 
-  public async getInitializeIx(quoteAssetMint: PublicKey): Promise<TransactionInstruction> {
-    const initializeIx = await this.program.methods.initialize()
-      .accounts({
-        admin: this.state?.admin,
-        state: this.getStatePublicKey(),
-        quoteAssetMint,
-        rent: SYSVAR_RENT_PUBKEY,
-        driftSigner: this.getSignerPublicKey(),
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-
-    return initializeIx;
-  }
-
-  public async getInitializePerpMarketIx(
-    marketIndex: number,
+  public async initializeSpotMarket(
+    mint: PublicKey,
     oracle: PublicKey,
+    oracleSource: OracleSource,
+    optimalUtilization: number = Number(SPOT_MARKET_RATE_PRECISION.divn(2)),
+    optimalRate: number = Number(SPOT_MARKET_RATE_PRECISION),
+    maxRate: number = Number(SPOT_MARKET_RATE_PRECISION),
+    initialAssetWeight: number = Number(SPOT_MARKET_WEIGHT_PRECISION),
+    maintenanceAssetWeight: number = Number(SPOT_MARKET_WEIGHT_PRECISION),
+    initialLiabilityWeight: number = Number(SPOT_MARKET_WEIGHT_PRECISION),
+    maintenanceLiabilityWeight: number = Number(SPOT_MARKET_WEIGHT_PRECISION),
+    imfFactor = 0,
+    liquidatorFee = 0,
+    ifLiquidationFee = 0,
+    activeStatus = true,
+    assetTier = AssetTier.COLLATERAL,
+    scaleInitialAssetWeightStart = ZERO,
+    withdrawGuardThreshold = ZERO,
+    orderTickSize = ONE,
+    orderStepSize = ONE,
+    ifTotalFactor = 0,
+    name = DEFAULT_MARKET_NAME,
+  ): Promise<TransactionSignature | null> {
+    const marketIndex = this.getStateAccount().numberOfSpotMarkets;
+    const initializeMarketIx = await getInitializeSpotMarketIx(
+      this,
+      marketIndex,
+      mint,
+      oracle,
+      oracleSource,
+      optimalUtilization,
+      optimalRate,
+      maxRate,
+      initialAssetWeight,
+      maintenanceAssetWeight,
+      initialLiabilityWeight,
+      maintenanceLiabilityWeight,
+      imfFactor,
+      liquidatorFee,
+      ifLiquidationFee,
+      activeStatus,
+      assetTier,
+      scaleInitialAssetWeightStart,
+      withdrawGuardThreshold,
+      orderTickSize,
+      orderStepSize,
+      ifTotalFactor,
+      name,
+    );
+
+    const tx = await buildTransaction(
+      [initializeMarketIx]
+    );
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        this.accountLoader.setSpotSlotCache(marketIndex, ret.slot);
+
+        await Promise.all([
+          this.loadState(),
+          this.loadSpotMarket(marketIndex),
+        ]);
+        return ret.txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async initializePerpMarket(
+    oracle: PublicKey,
+    oracleSource: OracleSource = OracleSource.PYTH,
     baseAssetReserve: BN,
     quoteAssetReserve: BN,
     periodicity: BN,
-    name = DEFAULT_MARKET_NAME,
     pegMultiplier: BN = PEG_PRECISION,
-    oracleSource: OracleSource = OracleSource.PYTH,
     contractTier: ContractTier = ContractTier.SPECULATIVE,
     marginRatioInitial = 2000,
     marginRatioMaintenance = 500,
@@ -192,18 +266,19 @@ export class DainClient {
     concentrationCoefScale = ONE,
     curveUpdateIntensity = 0,
     ammJitIntensity = 0,
-  ): Promise<TransactionInstruction> {
-    const nameBuffer = encodeName(name);
-    const perpMarket = getPerpMarketPublicKey(this.programId, marketIndex);
-
-    return await this.program.methods.initializePerpMarket(
+    name = DEFAULT_MARKET_NAME
+  ): Promise<TransactionSignature | null> {
+    const marketIndex = this.getStateAccount().numberOfMarkets;
+    const initializeMarketIx = await getInitializePerpMarketIx(
+      this,
       marketIndex,
+      oracle,
+      oracleSource,
       baseAssetReserve,
       quoteAssetReserve,
       periodicity,
       pegMultiplier,
-      oracleSource as any,
-      contractTier as any,
+      contractTier,
       marginRatioInitial,
       marginRatioMaintenance,
       liquidatorFee,
@@ -221,103 +296,27 @@ export class DainClient {
       concentrationCoefScale,
       curveUpdateIntensity,
       ammJitIntensity,
-      nameBuffer
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        admin: this.state?.admin,
-        oracle,
-        perpMarket,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-  }
+      name
+    );
 
-  public async getInitializeSpotMarketIx(
-    marketIndex: number,
-    mint: PublicKey,
-    optimalUtilization: number,
-    optimalRate: number,
-    maxRate: number,
-    oracle: PublicKey,
-    oracleSource: OracleSource,
-    initialAssetWeight: number,
-    maintenanceAssetWeight: number,
-    initialLiabilityWeight: number,
-    maintenanceLiabilityWeight: number,
-    name = DEFAULT_MARKET_NAME,
-    imfFactor = 0,
-    liquidatorFee = 0,
-    ifLiquidationFee = 0,
-    activeStatus = true,
-    assetTier = AssetTier.COLLATERAL,
-    scaleInitialAssetWeightStart = ZERO,
-    withdrawGuardThreshold = ZERO,
-    orderTickSize = ONE,
-    orderStepSize = ONE,
-    ifTotalFactor = 0,
-  ): Promise<TransactionInstruction> {
-    const nameBuffer = encodeName(name);
-    const spotMarket = getSpotMarketPublicKey(this.programId, marketIndex);
-    const spotMarketVault = getSpotMarketVaultPublicKey(this.programId, marketIndex);
-    const insuranceFundVault = getInsuranceFundVaultPublicKey(this.programId, marketIndex);
+    const tx = await buildTransaction(
+      [initializeMarketIx]
+    );
 
-    return await this.program.methods.initializeSpotMarket(
-      optimalUtilization,
-      optimalRate,
-      maxRate,
-      oracleSource as any,
-      initialAssetWeight,
-      maintenanceAssetWeight,
-      initialLiabilityWeight,
-      maintenanceLiabilityWeight,
-      imfFactor,
-      liquidatorFee,
-      ifLiquidationFee,
-      activeStatus,
-      assetTier,
-      scaleInitialAssetWeightStart,
-      withdrawGuardThreshold,
-      orderTickSize,
-      orderStepSize,
-      ifTotalFactor,
-      nameBuffer,
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        admin: this.state?.admin,
-        oracle,
-        spotMarket,
-        spotMarketMint: mint,
-        spotMarketVault,
-        insuranceFundVault,
-        driftSigner: this.getSignerPublicKey(),
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        this.accountLoader.setPerpSlotCache(marketIndex, ret.slot);
 
-  public async getSettleExpiredMarketIx(
-    marketIndex: number
-  ): Promise<TransactionInstruction> {
-    // const remainingAccounts = this.getRemainingAccounts({
-    //   userAccounts: [],
-    //   writablePerpMarketIndexes: [marketIndex],
-    //   writableSpotMarketIndexes: [QUOTE_SPOT_MARKET_INDEX],
-    // });
-    const perpMarketPublicKey = getPerpMarketPublicKey(this.programId, marketIndex);
+        await Promise.all([
+          this.loadState(),
+          this.loadPerpMarket(marketIndex),
+        ]);
+        return ret.txSig;
+      }
+    }
 
-    return await this.program.methods.settleExpiredMarket(marketIndex)
-      .accounts({
-        state: await this.getStatePublicKey(),
-        admin: this.state?.admin,
-        perpMarket: perpMarketPublicKey,
-      })
-      // .remainingAccounts(remainingAccounts)
-      .instruction();
+    return null;
   }
 
   /* User functions */
@@ -327,201 +326,300 @@ export class DainClient {
   ): Promise<TransactionSignature | null> {
     const initializeIxs = [];
 
-    const [_, initializeUserIx] = await this.getInitializeUserIx(subAccountId, name);
+    const [_, initializeUserIx] = await getInitializeUserIx(this, subAccountId, name);
     if (subAccountId === 0) {
-      const initializeUserStateIx = await this.getInitializeUserStateIx();
+      const initializeUserStateIx = await getInitializeUserStateIx(this);
       initializeIxs.push(initializeUserStateIx);
     }
 
     initializeIxs.push(initializeUserIx);
 
     const tx = await buildTransaction(
-      this.connection,
       initializeIxs
     );
 
     if (this.wallet && tx) {
-      const signature = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
-      return signature;
-    }
-    else {
-      return null;
-    }
-  }
-
-  public async getInitializeUserStateIx(): Promise<TransactionInstruction> {
-    return await this.program.methods.initializeUserStats()
-      .accounts({
-        userStats: this.getUserStatsPublicKey(),
-        state: this.getStatePublicKey(),
-        authority: this.authority,
-        payer: this.payer,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-  }
-
-  public async getInitializeUserIx(subAccountId: number, name?: string): Promise<[PublicKey, TransactionInstruction]> {
-    if (name === undefined) {
-      if (subAccountId === 0) {
-        name = DEFAULT_USER_NAME;
-      } else {
-        name = `Subaccount ${subAccountId + 1}`;
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        return ret.txSig;
       }
     }
 
-    const nameBuffer = encodeName(name);
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
+    return null;
+  }
 
-    const ix = await this.program.methods.initializeUser(
+  public async placeAndMakePerpOrder(
+    orderParams: OptionalOrderParams,
+    takerInfo: TakerInfo,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getPlaceAndMakeSpotOrderIx(
+      this,
+      orderParams,
+      takerInfo,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setPerpSlotCache(orderParams.marketIndex, slot);
+
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async placeAndTakePerpOrder(
+    orderParams: OptionalOrderParams,
+    makerInfo?: MakerInfo,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getPlaceAndTakePerpOrderIx(
+      this,
+      orderParams,
+      makerInfo,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setPerpSlotCache(orderParams.marketIndex, slot);
+
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async placeAndMakeSpotOrder(
+    orderParams: OptionalOrderParams,
+    takerInfo: TakerInfo,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getPlaceAndMakeSpotOrderIx(
+      this,
+      orderParams,
+      takerInfo,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setSpotSlotCache(orderParams.marketIndex, slot);
+        this.accountLoader.setSpotSlotCache(QUOTE_SPOT_MARKET_INDEX, slot);
+
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async placeAndTakeSpotOrder(
+    orderParams: OptionalOrderParams,
+    makerInfo?: MakerInfo,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getPlaceAndTakeSpotOrderIx(
+      this,
+      orderParams,
+      makerInfo,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setSpotSlotCache(orderParams.marketIndex, slot);
+        this.accountLoader.setSpotSlotCache(QUOTE_SPOT_MARKET_INDEX, slot);
+
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+
+  public async settlePnl(
+    marketIndex: number,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getSettlePnlIx(
+      this,
+      marketIndex,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig } = ret;
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async cancelOrder(
+    orderId?: number,
+    subAccountId?: number
+  ): Promise<TransactionSignature | null> {
+    const ix = await getCancelOrderIx(
+      this,
+      orderId,
+      subAccountId
+    );
+
+    const tx = await buildTransaction([ix]);
+
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig } = ret;
+        return txSig;
+      }
+    }
+
+    return null;
+  }
+
+  public async deposit(
+    marketIndex: number,
+    amount: BN,
+    userTokenAccount: PublicKey,
+    reduceOnly: boolean = false,
+    subAccountId = 0,
+  ): Promise<TransactionSignature | null> {
+    if (!this.wallet) {
+      return null;
+    }
+
+    const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
+    const isSolMarket = spotMarketAccount.mint.equals(WSOL_MINT);
+
+    const signerAuthority = this.wallet.publicKey;
+
+    const createWSOLTokenAccount = isSolMarket && userTokenAccount.equals(signerAuthority);
+
+    const instructions = [];
+
+    if (createWSOLTokenAccount) {
+      // Check if WSOL ata exists
+      let wsolAtaExists = false;
+      try {
+        const wsolAta = await getAccount(this.connection, userTokenAccount, 'confirmed');
+        if (wsolAta.owner.toBase58() == signerAuthority.toBase58()
+          && wsolAta.mint.toBase58() == NATIVE_MINT.toBase58()) {
+          wsolAtaExists = true;
+        }
+      } catch (ex) {
+        // console.log(ex);
+      }
+      if (!wsolAtaExists) {
+        instructions.push(
+          createAssociatedTokenAccountInstruction(signerAuthority, userTokenAccount, signerAuthority, NATIVE_MINT),
+        );
+      }
+
+      // Create Wrapped SOL account
+      instructions.push(
+        SystemProgram.transfer({
+          fromPubkey: signerAuthority,
+          toPubkey: userTokenAccount,
+          lamports: amount.toNumber(),
+        }),
+        createSyncNativeInstruction(userTokenAccount),
+      );
+    }
+
+    const depositIx = await getDepositIx(
+      this,
+      marketIndex,
+      amount,
+      reduceOnly,
       subAccountId,
-      nameBuffer
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        user: userPda,
-        userStats: this.getUserStatsPublicKey(),
-        authority: this.authority,
-        payer: this.payer,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-    return [userPda, ix];
+      userTokenAccount,
+    );
+    instructions.push(depositIx);
+
+    if (createWSOLTokenAccount) {
+      instructions.push(
+        createCloseAccountInstruction(userTokenAccount, signerAuthority, signerAuthority)
+      );
+    }
+
+    const tx = await buildTransaction(instructions);
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setSpotSlotCache(marketIndex, slot);
+        return txSig;
+      }
+    }
+
+    return null;
   }
 
-  public async getDepositIx(
+
+  public async withdraw(
     marketIndex: number,
     amount: BN,
-    reduceOnly = false,
+    userTokenAccount: PublicKey,
+    reduceOnly: boolean = false,
     subAccountId = 0,
-    userTokenAccount?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-    const spotMarketVault = getSpotMarketVaultPublicKey(this.programId, marketIndex);
-
-    return await this.program.methods.deposit(
+  ): Promise<TransactionSignature | null> {
+    const instructions = [];
+    const depositIx = await getWithdrawIx(
+      this,
       marketIndex,
       amount,
       reduceOnly,
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        spotMarketVault,
-        user: userPda,
-        userStats: this.getUserStatsPublicKey(),
-        userTokenAccount,
-        authority: this.authority,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
+      subAccountId,
+      userTokenAccount,
+    );
+    instructions.push(depositIx);
+
+    const tx = await buildTransaction(instructions);
+    if (this.wallet && tx) {
+      const ret = await executeTransaction(this.connection, tx, this.wallet, this.sendOpts);
+      if (ret) {
+        const { txSig, slot } = ret;
+        this.accountLoader.setSpotSlotCache(marketIndex, slot);
+        return txSig;
+      }
+    }
+
+    return null;
   }
-
-  public async getWithdrawIx(
-    marketIndex: number,
-    amount: BN,
-    reduceOnly = false,
-    subAccountId = 0,
-    userTokenAccount?: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-    const spotMarketVault = getSpotMarketVaultPublicKey(this.programId, marketIndex);
-
-    return await this.program.methods.withdraw(
-      marketIndex,
-      amount,
-      reduceOnly,
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        spotMarketVault,
-        user: userPda,
-        userStats: this.getUserStatsPublicKey(),
-        userTokenAccount,
-        authority: this.authority,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-  }
-
-  public async getPlaceAndTakePerpOrderIx(
-    orderParams: OrderParams,
-    subAccountId = 0,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-
-    return await this.program.methods.placeAndTakePerpOrder(
-      orderParams as any,
-      null
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        user: userPda,
-        userStats: this.getUserStatsPublicKey(),
-        authority: this.authority,
-      })
-      .instruction();
-  }
-
-  public async getPlaceAndMakePerpOrderIx(
-    orderParams: OrderParams,
-    takerOrderId: number,
-    subAccountId = 0,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-
-    return await this.program.methods.placeAndMakePerpOrder(
-      orderParams as any,
-      takerOrderId,
-    )
-      .accounts({
-        state: this.getStatePublicKey(),
-        user: userPda,
-        userStats: this.getUserStatsPublicKey(),
-        authority: this.authority,
-      })
-      .instruction();
-  }
-
-  public async getCancelOrderIx(
-    orderId: number,
-    subAccountId = 0,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-
-    return await this.program.methods.cancelOrder(orderId)
-      .accounts({
-        state: this.getStatePublicKey(),
-        user: userPda,
-        authority: this.authority,
-      })
-      .instruction();
-  }
-
-  public async getSettlePnlIx(
-    marketIndex: number,
-    subAccountId = 0,
-  ): Promise<TransactionInstruction> {
-    const userPda = getUserAccountPublicKey(this.programId, this.authority, subAccountId);
-    const spotMarketVault = getSpotMarketVaultPublicKey(this.programId, marketIndex);
-
-    return await this.program.methods.settlePnl(marketIndex)
-      .accounts({
-        state: this.getStatePublicKey(),
-        user: userPda,
-        spotMarketVault,
-        authority: this.authority,
-      })
-      .instruction();
-  }
-
   // Getter functions
 
   public getPerpMarketAccount(
     marketIndex: number
   ): PerpMarketAccount {
-    const market = this.perpMarkets.get(marketIndex);
+    const market = this.accountLoader.perpMarkets.get(marketIndex);
     if (!market) {
       throw new Error(`perpMarket #${marketIndex} not loaded`);
     }
@@ -530,7 +628,7 @@ export class DainClient {
   }
 
   public getPerpMarketAccounts(): PerpMarketAccount[] {
-    const accounts = Object.values(this.perpMarkets)
+    const accounts = Object.values(this.accountLoader.perpMarkets)
       .filter((value) => value !== undefined);
 
     return accounts;
@@ -539,7 +637,7 @@ export class DainClient {
   public getSpotMarketAccount(
     marketIndex: number
   ): SpotMarketAccount {
-    const market = this.spotMarkets.get(marketIndex);
+    const market = this.accountLoader.spotMarkets.get(marketIndex);
     if (!market) {
       throw new Error(`spotMarket #${marketIndex} not loaded`);
     }
@@ -548,7 +646,7 @@ export class DainClient {
   }
 
   public getSpotMarketAccounts(): SpotMarketAccount[] {
-    const accounts = Object.values(this.spotMarkets)
+    const accounts = Object.values(this.accountLoader.spotMarkets)
       .filter((value) => value !== undefined);
 
     return accounts;
@@ -561,7 +659,7 @@ export class DainClient {
       return QUOTE_ORACLE_PRICE_DATA;
     }
 
-    const oracle = this.oracles.get(oracleString);
+    const oracle = this.accountLoader.oracles.get(oracleString);
     if (!oracle) {
       throw new Error(`oracle #${oracleString} not loaded`);
     }
@@ -579,6 +677,9 @@ export class DainClient {
     return this.getOraclePriceData(spotMarketAccount.oracle.toBase58());
   }
 
+  public getRemainingAccounts(params: RemainingAccountParams) {
+    return this.accountLoader.getRemainingAccounts(params, 0);
+  }
   // Helpers
 
   /**

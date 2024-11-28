@@ -1,10 +1,52 @@
-import { BlockhashWithExpiryBlockHeight, ComputeBudgetProgram, Connection, SendOptions, Transaction, TransactionExpiredBlockheightExceededError, TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Connection, PublicKey, SendOptions, SystemProgram, Transaction, TransactionExpiredBlockheightExceededError, TransactionInstruction } from "@solana/web3.js";
 import promiseRetry from "promise-retry";
-import { delay } from "./modules";
-import { Wallet } from "./types";
+import { createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createSyncNativeInstruction, getAccount, NATIVE_MINT } from "@solana/spl-token";
+import BN from "bn.js";
+
+import { TxSigAndSlot, Wallet } from "../types";
+import { delay } from ".";
+
+export const getWrapSolIxs = async (
+  connection: Connection,
+  authority: PublicKey,
+  userTokenAccount: PublicKey,
+  amount: BN,
+) => {
+  const wrapIxs = [];
+
+  // Check if WSOL ata exists
+  let wsolAtaExists = false;
+  try {
+    const wsolAta = await getAccount(connection, userTokenAccount, 'confirmed');
+    if (wsolAta.owner.toBase58() == authority.toBase58()
+      && wsolAta.mint.toBase58() == NATIVE_MINT.toBase58()) {
+      wsolAtaExists = true;
+    }
+  } catch (ex) {
+    // console.log(ex);
+  }
+  if (!wsolAtaExists) {
+    wrapIxs.push(
+      createAssociatedTokenAccountInstruction(authority, userTokenAccount, authority, NATIVE_MINT),
+    );
+  }
+
+  // Create Wrapped SOL account
+  wrapIxs.push(
+    SystemProgram.transfer({
+      fromPubkey: authority,
+      toPubkey: userTokenAccount,
+      lamports: amount.toNumber(),
+    }),
+    createSyncNativeInstruction(userTokenAccount),
+  );
+
+  const closeIx = createCloseAccountInstruction(userTokenAccount, authority, authority);
+
+  return [wrapIxs, closeIx];
+}
 
 export const buildTransaction = async (
-  connection: Connection,
   ixs: TransactionInstruction[],
 ): Promise<Transaction | null> => {
   const tx = new Transaction();
@@ -26,14 +68,14 @@ export const executeTransaction = async (
   tx: Transaction,
   wallet: Wallet,
   sendOptions: SendOptions,
-): Promise<string | null> => {
+): Promise<TxSigAndSlot | null> => {
   const blockhashInfo = await connection.getLatestBlockhash(sendOptions.preflightCommitment);
 
   tx.feePayer = wallet.publicKey;
   tx.recentBlockhash = blockhashInfo.blockhash;
   const txBytes = (await wallet.signTransaction(tx)).serialize();
 
-  const txid = await connection.sendRawTransaction(txBytes, sendOptions);
+  const txSig = await connection.sendRawTransaction(txBytes, sendOptions);
 
   const controller = new AbortController();
   const abortSignal = controller.signal;
@@ -45,7 +87,7 @@ export const executeTransaction = async (
       try {
         await connection.sendRawTransaction(txBytes, sendOptions);
       } catch (e) {
-        console.warn(`Failed to resend transaction: ${e}`);
+        // console.warn(`Failed to resend transaction: ${e}`);
       }
     }
   };
@@ -60,7 +102,7 @@ export const executeTransaction = async (
         {
           ...blockhashInfo,
           lastValidBlockHeight,
-          signature: txid,
+          signature: txSig,
           abortSignal,
         },
         "confirmed"
@@ -69,7 +111,7 @@ export const executeTransaction = async (
         // in case ws socket died
         while (!abortSignal.aborted) {
           await delay(2);
-          const tx = await connection.getSignatureStatus(txid, {
+          const tx = await connection.getSignatureStatus(txSig, {
             searchTransactionHistory: false,
           });
           if (tx?.value?.confirmationStatus === "confirmed") {
@@ -93,7 +135,7 @@ export const executeTransaction = async (
   // in case rpc is not synced yet, we add some retries
   const txResult = await promiseRetry(
     async (retry) => {
-      const response = await connection.getTransaction(txid, {
+      const response = await connection.getTransaction(txSig, {
         commitment: "confirmed",
         maxSupportedTransactionVersion: 0,
       });
@@ -112,5 +154,10 @@ export const executeTransaction = async (
     return null;
   }
 
-  return txid;
+  const slot = txResult.slot;
+
+  return {
+    txSig,
+    slot
+  };
 };

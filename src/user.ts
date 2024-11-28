@@ -31,7 +31,7 @@ export class User {
   }
 
   public async load() {
-    const userAccount = await this.client.accountLoader.fetchUser(this.userAccountPublicKey);
+    const userAccount = await this.client.accountLoader.loadUser(this.userAccountPublicKey);
     if (!userAccount) {
       throw Error("Failed to load user account");
     }

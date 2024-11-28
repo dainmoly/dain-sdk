@@ -97,4 +97,8 @@ export function getVariant(object: any): string {
 	return Object.keys(object)[0];
 }
 
+export function getUserMapKey(subAccountId: number, authority: PublicKey): string {
+	return `${subAccountId}_${authority.toString()}`;
+}
+
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

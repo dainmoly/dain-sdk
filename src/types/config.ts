@@ -4,4 +4,5 @@ export type DainConfig = {
     programId?: PublicKey;
     sendOpts?: SendOptions;
     confirmOpts?: ConfirmOptions;
+    activeSubAccountId?: number;
 };
