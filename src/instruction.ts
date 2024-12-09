@@ -251,6 +251,14 @@ export async function getDepositIx(
   const userPda = getUserAccountPublicKey(client.programId, client.authority, subAccountId);
   const spotMarketVault = getSpotMarketVaultPublicKey(client.programId, marketIndex);
 
+  let remainingAccounts = [];
+  const userAccounts = [client.getUser(subAccountId).userAccount];
+  remainingAccounts = client.getRemainingAccounts({
+    userAccounts,
+    useMarketLastSlotCache: true,
+    writableSpotMarketIndexes: [marketIndex],
+  });
+
   return await client.program.methods.deposit(
     marketIndex,
     amount,
@@ -265,6 +273,7 @@ export async function getDepositIx(
       authority: client.authority,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
+    .remainingAccounts(remainingAccounts)
     .instruction();
 }
 
@@ -278,6 +287,14 @@ export async function getWithdrawIx(
 ): Promise<TransactionInstruction> {
   const userPda = getUserAccountPublicKey(client.programId, client.authority, subAccountId);
   const spotMarketVault = getSpotMarketVaultPublicKey(client.programId, marketIndex);
+
+  let remainingAccounts = [];
+  const userAccounts = [client.getUser(subAccountId).userAccount];
+  remainingAccounts = client.getRemainingAccounts({
+    userAccounts,
+    useMarketLastSlotCache: true,
+    writableSpotMarketIndexes: [marketIndex],
+  });
 
   return await client.program.methods.withdraw(
     marketIndex,
@@ -294,6 +311,7 @@ export async function getWithdrawIx(
       authority: client.authority,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
+    .remainingAccounts(remainingAccounts)
     .instruction();
 }
 

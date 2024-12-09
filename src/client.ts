@@ -6,12 +6,12 @@ import { AccountLoader } from "./accountLoader";
 import { buildTransaction, executeTransaction } from "./modules/transaction";
 import { DAIN_PROGRAM_ID, CONFIRMATION_OPTS, PEG_PRECISION, ZERO, BASE_PRECISION, ONE, PRICE_PRECISION, DEFAULT_MARKET_NAME, SPOT_MARKET_RATE_PRECISION, SPOT_MARKET_WEIGHT_PRECISION, QUOTE_SPOT_MARKET_INDEX, WSOL_MINT } from "./constants";
 import { AssetTier, ContractTier, DainConfig, DainProgram, MakerInfo, MarketType, OptionalOrderParams, OraclePriceData, OracleSource, PerpMarketAccount, RemainingAccountParams, SpotMarketAccount, StateAccount, TakerInfo, UserStatsAccount, Wallet } from "./types";
-import { castNumberToSpotPrecision, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getStateAccountPublicKey, getUserMapKey, getUserStatsAccountPublicKey, isVariant } from "./modules";
+import { castNumberToSpotPrecision, getPerpMarketPublicKey, getSignerPublicKey, getSpotMarketPublicKey, getStateAccountPublicKey, getUserAccountPublicKey, getUserMapKey, getUserStatsAccountPublicKey, isVariant } from "./modules";
 import { NodeWallet } from "./modules/nodeWallet";
 import { ORACLE_DEFAULT_KEY, QUOTE_ORACLE_PRICE_DATA } from "./oracles/quoteAssetOracleClient";
 import { User } from "./user";
 import { getCancelOrderIx, getDepositIx, getInitializeIx, getInitializePerpMarketIx, getInitializeSpotMarketIx, getInitializeUserIx, getInitializeUserStateIx, getPlaceAndMakeSpotOrderIx, getPlaceAndTakePerpOrderIx, getPlaceAndTakeSpotOrderIx, getSettlePnlIx, getWithdrawIx } from "./instruction";
-import { createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createSyncNativeInstruction, getAccount, NATIVE_MINT } from "@solana/spl-token";
+import { createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createSyncNativeInstruction, getAccount, getAssociatedTokenAddressSync, NATIVE_MINT } from "@solana/spl-token";
 
 
 export class DainClient {
@@ -118,6 +118,42 @@ export class DainClient {
     await this.accountLoader.loadSpotMarket(pubkey);
   }
 
+  public async load() {
+    await this.loadState();
+    await this.loadPerpMarkets();
+    await this.loadSpotMarkets();
+    await this.addUser(this.activeSubAccountId);
+  }
+
+  public async addUser(
+    subAccountId: number,
+    authority?: PublicKey,
+  ): Promise<boolean> {
+    authority = authority ?? this.authority;
+    const userKey = getUserMapKey(subAccountId, authority);
+
+    if (this.users.has(userKey)) {
+      return true;
+    }
+
+    const userAccountPublicKey = getUserAccountPublicKey(this.program.programId, authority, subAccountId);
+    const userAccount = await this.accountLoader.loadUser(userAccountPublicKey);
+    if (!userAccount) {
+      return false;
+    }
+
+    const userStatsPublicKey = getUserStatsAccountPublicKey(this.program.programId, authority);
+    const userStatsAccount = await this.accountLoader.loadUserStats(userStatsPublicKey);
+    if (!userStatsAccount) {
+      return false;
+    }
+
+    const user = new User(this, userAccountPublicKey, userAccount, userStatsPublicKey, userStatsAccount);
+    this.users.set(userKey, user);
+
+    return true;
+  }
+
   public getUser(subAccountId: number, authority?: PublicKey): User {
     subAccountId = subAccountId ?? this.activeSubAccountId;
     authority = authority ?? this.authority;
@@ -141,12 +177,6 @@ export class DainClient {
 
   public getUsers(): User[] {
     return [...this.users.values()];
-  }
-
-  public async load() {
-    await this.loadState();
-    await this.loadPerpMarkets();
-    await this.loadSpotMarkets();
   }
 
   /* Admin functions */
@@ -505,6 +535,15 @@ export class DainClient {
     return null;
   }
 
+  /**
+   * Deposit funds into the given spot market
+   * @param marketIndex 
+   * @param amount 
+   * @param userTokenAccount 
+   * @param reduceOnly 
+   * @param subAccountId 
+   * @returns 
+   */
   public async deposit(
     marketIndex: number,
     amount: BN,
@@ -528,6 +567,8 @@ export class DainClient {
     if (createWSOLTokenAccount) {
       // Check if WSOL ata exists
       let wsolAtaExists = false;
+      userTokenAccount = getAssociatedTokenAddressSync(WSOL_MINT, signerAuthority);
+
       try {
         const wsolAta = await getAccount(this.connection, userTokenAccount, 'confirmed');
         if (wsolAta.owner.toBase58() == signerAuthority.toBase58()
@@ -584,6 +625,15 @@ export class DainClient {
   }
 
 
+  /**
+   * Withdraws from a user account. If deposit doesn't already exist, creates a borrow
+   * @param marketIndex 
+   * @param amount 
+   * @param userTokenAccount 
+   * @param reduceOnly 
+   * @param subAccountId 
+   * @returns 
+   */
   public async withdraw(
     marketIndex: number,
     amount: BN,
@@ -591,8 +641,41 @@ export class DainClient {
     reduceOnly: boolean = false,
     subAccountId = 0,
   ): Promise<TransactionSignature | null> {
+    if (!this.wallet) {
+      return null;
+    }
+
+    const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
+    const isSolMarket = spotMarketAccount.mint.equals(WSOL_MINT);
+
+    const signerAuthority = this.wallet.publicKey;
+
+    const createWSOLTokenAccount = isSolMarket && userTokenAccount.equals(signerAuthority);
+
     const instructions = [];
-    const depositIx = await getWithdrawIx(
+
+    if (createWSOLTokenAccount) {
+      // Check if WSOL ata exists
+      let wsolAtaExists = false;
+      userTokenAccount = getAssociatedTokenAddressSync(WSOL_MINT, signerAuthority);
+
+      try {
+        const wsolAta = await getAccount(this.connection, userTokenAccount, 'confirmed');
+        if (wsolAta.owner.toBase58() == signerAuthority.toBase58()
+          && wsolAta.mint.toBase58() == NATIVE_MINT.toBase58()) {
+          wsolAtaExists = true;
+        }
+      } catch (ex) {
+        // console.log(ex);
+      }
+      if (!wsolAtaExists) {
+        instructions.push(
+          createAssociatedTokenAccountInstruction(signerAuthority, userTokenAccount, signerAuthority, NATIVE_MINT),
+        );
+      }
+    }
+
+    const withdrawIx = await getWithdrawIx(
       this,
       marketIndex,
       amount,
@@ -600,7 +683,13 @@ export class DainClient {
       subAccountId,
       userTokenAccount,
     );
-    instructions.push(depositIx);
+    instructions.push(withdrawIx);
+
+    if (createWSOLTokenAccount) {
+      instructions.push(
+        createCloseAccountInstruction(userTokenAccount, signerAuthority, signerAuthority)
+      );
+    }
 
     const tx = await buildTransaction(instructions);
     if (this.wallet && tx) {

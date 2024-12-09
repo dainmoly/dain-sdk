@@ -43,16 +43,6 @@ export class AccountLoader {
     return undefined;
   }
 
-  async fetchUserState(pubkey: PublicKey): Promise<UserStatsAccount | undefined> {
-    const data = await this.fetchAccount(pubkey);
-    if (data) {
-      const userStats = this.coder.accounts.decode("userStats", data) as UserStatsAccount;
-      return userStats;
-    }
-
-    return undefined;
-  }
-
   async loadPerpMarkets() {
     const marketAccounts = (await this.program.account.perpMarket.all()) as ProgramAccount<PerpMarketAccount>[];
 
@@ -108,6 +98,16 @@ export class AccountLoader {
     }
 
     return null;
+  }
+
+  async loadUserStats(pubkey: PublicKey): Promise<UserStatsAccount | undefined> {
+    const data = await this.fetchAccount(pubkey);
+    if (data) {
+      const userStats = this.coder.accounts.decode("userStats", data) as UserStatsAccount;
+      return userStats;
+    }
+
+    return undefined;
   }
 
   async loadOracle(source: OracleSource, pubkey: PublicKey) {

@@ -35,8 +35,13 @@ export class User {
     if (!userAccount) {
       throw Error("Failed to load user account");
     }
-
     this.userAccount = userAccount;
+
+    const userStatsAccount = await this.client.accountLoader.loadUserStats(this.userStatsAccountPublicKey);
+    if (!userStatsAccount) {
+      throw Error("Failed to load userStats account");
+    }
+    this.userStatsAccount = userStatsAccount;
   }
 
   public getUserAccount(): UserAccount {
