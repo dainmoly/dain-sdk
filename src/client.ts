@@ -717,9 +717,7 @@ export class DainClient {
   }
 
   public getPerpMarketAccounts(): PerpMarketAccount[] {
-    const accounts = Object.values(this.accountLoader.perpMarkets)
-      .filter((value) => value !== undefined);
-
+    const accounts = [...this.accountLoader.perpMarkets.values()];
     return accounts;
   }
 
@@ -735,9 +733,7 @@ export class DainClient {
   }
 
   public getSpotMarketAccounts(): SpotMarketAccount[] {
-    const accounts = Object.values(this.accountLoader.spotMarkets)
-      .filter((value) => value !== undefined);
-
+    const accounts = [...this.accountLoader.spotMarkets.values()];
     return accounts;
   }
 
