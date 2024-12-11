@@ -1,5 +1,5 @@
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { BN } from 'bn.js';
+import { BN } from '..';
 
 export const ZERO = new BN(0);
 export const ONE = new BN(1);
@@ -111,5 +111,3 @@ export const FUEL_WINDOW = new BN(60 * 60 * 24 * 28); // 28 days
 export const FUEL_START_TS = new BN(1723147200); // unix timestamp
 
 export const MAX_PREDICTION_PRICE = PRICE_PRECISION;
-
-export const MAX_NAME_LENGTH = 32;

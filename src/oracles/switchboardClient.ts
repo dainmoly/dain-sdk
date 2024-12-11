@@ -1,9 +1,8 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { PRICE_PRECISION, TEN } from '../constants/numericConstants';
+import { OracleClient, OraclePriceData } from './types';
+import switchboardV2Idl from '../idl/switchboard.json';
 import { BorshAccountsCoder, BN, Idl } from '@coral-xyz/anchor';
-
-import { PRICE_PRECISION, TEN } from '../constants';
-import { OracleClient, OraclePriceData } from '../types';
-import * as IDL from '../idls/switchboard.json';
 
 type SwitchboardDecimal = {
 	scale: number;
@@ -26,16 +25,14 @@ export class SwitchboardClient implements OracleClient {
 
 	public constructor(connection: Connection) {
 		this.connection = connection;
-		this.coder = new BorshAccountsCoder(IDL as Idl);
+		this.coder = new BorshAccountsCoder(switchboardV2Idl as Idl);
 	}
 
 	public async getOraclePriceData(
 		pricePublicKey: PublicKey
-	): Promise<OraclePriceData | undefined> {
+	): Promise<OraclePriceData> {
 		const accountInfo = await this.connection.getAccountInfo(pricePublicKey);
-		if (accountInfo) {
-			return this.getOraclePriceDataFromBuffer(accountInfo.data);
-		}
+		return this.getOraclePriceDataFromBuffer(accountInfo.data);
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {

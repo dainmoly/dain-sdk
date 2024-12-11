@@ -1,10 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
+import { OracleClient, OraclePriceData } from './types';
 import { BN } from '@coral-xyz/anchor';
-
-import { PRICE_PRECISION } from '../constants';
-import { OracleClient, OraclePriceData } from '../types';
-
-export const ORACLE_DEFAULT_KEY = PublicKey.default.toBase58();
+import { PRICE_PRECISION } from '../constants/numericConstants';
 
 export const QUOTE_ORACLE_PRICE_DATA: OraclePriceData = {
 	price: PRICE_PRECISION,
@@ -14,7 +11,7 @@ export const QUOTE_ORACLE_PRICE_DATA: OraclePriceData = {
 };
 
 export class QuoteAssetOracleClient implements OracleClient {
-	public constructor() { }
+	public constructor() {}
 
 	public async getOraclePriceData(
 		_pricePublicKey: PublicKey

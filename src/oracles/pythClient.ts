@@ -1,9 +1,13 @@
 import { parsePriceData } from '@pythnetwork/client';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { OracleClient, OraclePriceData } from './types';
 import { BN } from '@coral-xyz/anchor';
-
-import { OracleClient, OraclePriceData } from '../types';
-import { ONE, PRICE_PRECISION, QUOTE_PRECISION, TEN } from '../constants';
+import {
+	ONE,
+	PRICE_PRECISION,
+	QUOTE_PRECISION,
+	TEN,
+} from '../constants/numericConstants';
 
 export class PythClient implements OracleClient {
 	private connection: Connection;
@@ -22,20 +26,15 @@ export class PythClient implements OracleClient {
 
 	public async getOraclePriceData(
 		pricePublicKey: PublicKey
-	): Promise<OraclePriceData | undefined> {
+	): Promise<OraclePriceData> {
 		const accountInfo = await this.connection.getAccountInfo(pricePublicKey);
-		if (accountInfo) {
-			return this.getOraclePriceDataFromBuffer(accountInfo.data);
-		}
-
-		return undefined;
+		return this.getOraclePriceDataFromBuffer(accountInfo.data);
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {
 		const priceData = parsePriceData(buffer);
-		console.log(priceData)
 		const confidence = convertPythPrice(
-			priceData.confidence ?? 0,
+			priceData.confidence,
 			priceData.exponent,
 			this.multiple
 		);
@@ -54,12 +53,12 @@ export class PythClient implements OracleClient {
 			slot: new BN(priceData.lastSlot.toString()),
 			confidence,
 			twap: convertPythPrice(
-				priceData.emaPrice.value,
+				priceData.twap.value,
 				priceData.exponent,
 				this.multiple
 			),
 			twapConfidence: convertPythPrice(
-				priceData.emaConfidence.value,
+				priceData.twac.value,
 				priceData.exponent,
 				this.multiple
 			),
@@ -68,11 +67,7 @@ export class PythClient implements OracleClient {
 	}
 }
 
-export function convertPythPrice(
-	price: number,
-	exponent: number,
-	multiple: BN
-): BN {
+function convertPythPrice(price: number, exponent: number, multiple: BN): BN {
 	exponent = Math.abs(exponent);
 	const pythPrecision = TEN.pow(new BN(exponent).abs()).div(multiple);
 	return new BN(price * Math.pow(10, exponent))

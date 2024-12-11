@@ -6,8 +6,10 @@
   "description": "DAIN prediction's TS sdk",
   "scripts": {
     "clean": "rm -fr dist/",
-    "build": "tsup",
-    "test": "vitest"
+    "build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js",
+    "build:browser": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js --force-env browser",
+    "lint": "eslint './**/*.{ts,tsx}' --quiet",
+    "test": "mocha -r ts-node/register tests/**/*.ts"
   },
   "types": "dist/index.d.ts",
   "exports": {
@@ -27,29 +29,56 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.18.0"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "0.29.0",
-    "@pythnetwork/client": "^2.22.0",
+    "@coral-xyz/anchor": "0.28.0",
+    "@coral-xyz/anchor-30": "npm:@coral-xyz/anchor@0.30.1",
+    "@ellipsis-labs/phoenix-sdk": "^1.4.2",
+    "@grpc/grpc-js": "^1.8.0",
+    "@openbook-dex/openbook-v2": "0.2.10",
+    "@project-serum/serum": "^0.13.38",
+    "@pythnetwork/client": "2.5.3",
+    "@pythnetwork/price-service-sdk": "^1.7.1",
+    "@pythnetwork/pyth-solana-receiver": "^0.7.0",
     "@solana/spl-token": "0.3.7",
-    "@solana/wallet-adapter-base": "^0.9.23",
-    "@solana/web3.js": "^1.95.4",
-    "@switchboard-xyz/on-demand": "^1.2.47",
-    "@types/bn.js": "^5.1.6",
-    "@types/node": "^22.9.0",
-    "@types/promise-retry": "^1.1.6",
-    "bn.js": "^5.2.1",
-    "promise-retry": "^2.0.1"
+    "@solana/web3.js": "1.92.3",
+    "@switchboard-xyz/on-demand": "1.2.42",
+    "@triton-one/yellowstone-grpc": "1.3.0",
+    "anchor-bankrun": "^0.3.0",
+    "node-cache": "^5.1.2",
+    "rpc-websockets": "7.5.1",
+    "solana-bankrun": "^0.3.0",
+    "strict-event-emitter-types": "^2.0.0",
+    "tweetnacl": "1.0.3",
+    "uuid": "^8.3.2",
+    "yargs": "^17.7.2",
+    "zstddec": "^0.1.0"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.26.2",
-    "@typescript-eslint/eslint-plugin": "^6.3.0",
-    "@typescript-eslint/parser": "^6.3.0",
-    "eslint": "^8.47.0",
-    "prettier": "^3.0.1",
-    "tsup": "^8.0.2",
-    "typescript": "^5.1.6",
-    "vitest": "^0.34.1"
+    "@types/big.js": "^6.2.0",
+    "@types/bn.js": "^5.1.3",
+    "@types/bs58": "^4.0.4",
+    "@types/chai": "^4.3.1",
+    "@types/jest": "^28.1.3",
+    "@types/mocha": "^9.1.1",
+    "@typescript-eslint/eslint-plugin": "4.28.0",
+    "@typescript-eslint/parser": "4.28.0",
+    "chai": "^4.3.6",
+    "encoding": "^0.1.13",
+    "eslint": "7.29.0",
+    "eslint-config-prettier": "8.3.0",
+    "eslint-plugin-prettier": "3.4.0",
+    "lodash": "^4.17.21",
+    "mocha": "^10.0.0",
+    "object-sizeof": "^2.6.3",
+    "prettier": "3.0.1",
+    "sinon": "^18.0.0",
+    "ts-node": "^10.8.0",
+    "typescript": "^4.9.5"
+  },
+  "resolutions": {
+    "@solana/errors": "2.0.0-preview.4",
+    "@solana/codecs-data-structures": "2.0.0-preview.4"
   }
 }

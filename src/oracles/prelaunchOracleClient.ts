@@ -1,33 +1,28 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { OracleClient, OraclePriceData } from './types';
 import { Program } from '@coral-xyz/anchor';
-
-import { Drift } from '../idls/drift';
-import { PrelaunchOracle, OraclePriceData, OracleClient } from '../types';
+import { PrelaunchOracle } from '../types';
 
 export class PrelaunchOracleClient implements OracleClient {
 	private connection: Connection;
-	private program: Program<Drift>;
+	private program: Program;
 
-	public constructor(connection: Connection, program: Program<Drift>) {
+	public constructor(connection: Connection, program: Program) {
 		this.connection = connection;
 		this.program = program;
 	}
 
 	public async getOraclePriceData(
 		pricePublicKey: PublicKey
-	): Promise<OraclePriceData | undefined> {
+	): Promise<OraclePriceData> {
 		const accountInfo = await this.connection.getAccountInfo(pricePublicKey);
-		if (accountInfo) {
-			return this.getOraclePriceDataFromBuffer(accountInfo.data);
-		}
-
-		return undefined;
+		return this.getOraclePriceDataFromBuffer(accountInfo.data);
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {
 		const prelaunchOracle =
 			this.program.account.prelaunchOracle.coder.accounts.decodeUnchecked(
-				'prelaunchOracle',
+				'PrelaunchOracle',
 				buffer
 			) as PrelaunchOracle;
 

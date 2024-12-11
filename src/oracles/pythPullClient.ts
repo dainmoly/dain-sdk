@@ -1,12 +1,18 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { AnchorProvider, BN, IdlAccounts, Program } from '@coral-xyz/anchor';
-
-import { OracleClient, OraclePriceData } from '../types';
-import { ONE, PRICE_PRECISION, QUOTE_PRECISION, TEN, DRIFT_ORACLE_RECEIVER_ID } from '../constants';
-import { PythSolanaReceiver as PythSolanaReceiverProgram } from "../idls/pythSolanaReceiver";
-import pythSolanaReceiverIdl from '../idls/pyth_solana_receiver.json';
-
-export type PriceUpdateAccount = IdlAccounts<PythSolanaReceiverProgram>["priceUpdateV2"];
+import { OracleClient, OraclePriceData } from './types';
+import { AnchorProvider, BN, Program } from '@coral-xyz/anchor';
+import {
+	ONE,
+	PRICE_PRECISION,
+	QUOTE_PRECISION,
+	TEN,
+} from '../constants/numericConstants';
+import {
+	PythSolanaReceiverProgram,
+	pythSolanaReceiverIdl,
+} from '@pythnetwork/pyth-solana-receiver';
+import { PriceUpdateAccount } from '@pythnetwork/pyth-solana-receiver/lib/PythSolanaReceiver';
+import { DRIFT_ORACLE_RECEIVER_ID, Wallet } from '..';
 
 export class PythPullClient implements OracleClient {
 	private connection: Connection;
@@ -44,11 +50,9 @@ export class PythPullClient implements OracleClient {
 
 	public async getOraclePriceData(
 		pricePublicKey: PublicKey
-	): Promise<OraclePriceData | undefined> {
+	): Promise<OraclePriceData> {
 		const accountInfo = await this.connection.getAccountInfo(pricePublicKey);
-		if (accountInfo) {
-			return this.getOraclePriceDataFromBuffer(accountInfo.data);
-		}
+		return this.getOraclePriceDataFromBuffer(accountInfo.data);
 	}
 
 	public getOraclePriceDataFromBuffer(buffer: Buffer): OraclePriceData {
