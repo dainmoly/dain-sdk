@@ -1,7 +1,7 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
@@ -20,11 +20,6 @@
   "repository": {
     "url": "https://github.com/dainmoly/dain-sdk"
   },
-  "files": [
-    "dist",
-    "package.json",
-    "README.md"
-  ],
   "engines": {
     "node": ">=20.18.0"
   },
