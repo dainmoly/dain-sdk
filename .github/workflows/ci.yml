@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
   build:
@@ -17,22 +17,23 @@ jobs:
         node-version: [20.18.x]
 
     steps:
-        - uses: actions/checkout@v3
-        - name: Use Node.js ${{ matrix.node-version }}
-          uses: actions/setup-node@v4
-          with:
-            node-version: ${{ matrix.node-version }}
-            registry-url: 'https://registry.npmjs.org'
-
-        - name: Install main dependencies
-          run: npm install
-
-        - name: Compile code
-          run: npm run build
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: "https://registry.npmjs.org"
           
-        - run: npm ci
+      - name: Setup yarn
+        run: npm install -g yarn
 
-        - name: Publish to npm
-          run: npm publish --provenance --access public
-          env:
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Install main dependencies
+        run: yarn install
+
+      - name: Compile code
+        run: yarn build
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
