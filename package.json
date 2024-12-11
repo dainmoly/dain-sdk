@@ -1,25 +1,22 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
-    "clean": "rm -fr dist/",
+    "clean": "rm -fr lib",
     "build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js",
     "build:browser": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js --force-env browser",
     "lint": "eslint './**/*.{ts,tsx}' --quiet",
     "test": "mocha -r ts-node/register tests/**/*.ts"
   },
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/index.js"
-    },
-    "./package.json": "./package.json"
+  "directories": {
+    "lib": "lib"
   },
+  "main": "lib/node/index.js",
+  "types": "lib/node/index.d.ts",
+  "browser": "./lib/browser/index.js",
   "repository": {
     "url": "https://github.com/dainmoly/dain-sdk"
   },
