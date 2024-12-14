@@ -11,7 +11,7 @@ import { BulkAccountLoader } from "./accounts/bulkAccountLoader";
 import { NetworkEnv } from "./config";
 import { TxSender } from "./tx/types";
 import { TxHandler, TxHandlerConfig } from "./tx/txHandler";
-import { DelistedMarketSetting, GrpcConfigs } from "./accounts/types";
+import { DelistedMarketSetting } from "./accounts/types";
 
 export type DainClientConfig = {
   connection: Connection;
@@ -42,12 +42,6 @@ export type DainClientConfig = {
 };
 
 export type DainClientSubscriptionConfig =
-  | {
-      type: "grpc";
-      grpcConfigs: GrpcConfigs;
-      resubTimeoutMs?: number;
-      logResubMessages?: boolean;
-    }
   | {
       type: "websocket";
       resubTimeoutMs?: number;

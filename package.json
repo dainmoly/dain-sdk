@@ -5,18 +5,32 @@
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
-    "clean": "rm -fr lib",
-    "build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js",
-    "build:browser": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json && node scripts/postbuild.js --force-env browser",
-    "lint": "eslint './**/*.{ts,tsx}' --quiet",
+    "build": "tsup",
+    "clean": "rm -fr dist/",
     "test": "mocha -r ts-node/register tests/**/*.ts"
   },
-  "directories": {
-    "lib": "lib"
+  "exports": {
+    "browser": {
+      "import": "./dist/index.browser.mjs",
+      "require": "./dist/index.browser.cjs"
+    },
+    "node": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "types": "./dist/index.d.ts"
   },
-  "main": "lib/node/index.js",
-  "types": "lib/node/index.d.ts",
-  "browser": "./lib/browser/index.js",
+  "browser": {
+    "./dist/index.cjs": "./dist/index.browser.cjs",
+    "./dist/index.mjs": "./dist/index.browser.mjs"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "dist/"
+  ],
   "repository": {
     "url": "https://github.com/dainmoly/dain-sdk"
   },
@@ -27,7 +41,6 @@
     "@coral-xyz/anchor": "0.28.0",
     "@coral-xyz/anchor-30": "npm:@coral-xyz/anchor@0.30.1",
     "@ellipsis-labs/phoenix-sdk": "^1.4.2",
-    "@grpc/grpc-js": "^1.8.0",
     "@openbook-dex/openbook-v2": "0.2.10",
     "@project-serum/serum": "^0.13.38",
     "@pythnetwork/client": "2.5.3",
@@ -36,12 +49,11 @@
     "@solana/spl-token": "0.3.7",
     "@solana/web3.js": "1.92.3",
     "@switchboard-xyz/on-demand": "1.2.42",
-    "@triton-one/yellowstone-grpc": "1.3.0",
     "anchor-bankrun": "^0.3.0",
     "node-cache": "^5.1.2",
-    "rpc-websockets": "7.5.1",
     "solana-bankrun": "^0.3.0",
     "strict-event-emitter-types": "^2.0.0",
+    "tsup": "^8.3.5",
     "tweetnacl": "1.0.3",
     "uuid": "^8.3.2",
     "yargs": "^17.7.2",
@@ -67,7 +79,7 @@
     "prettier": "3.0.1",
     "sinon": "^18.0.0",
     "ts-node": "^10.8.0",
-    "typescript": "^4.9.5"
+    "typescript": "^5.1.6"
   },
   "resolutions": {
     "@solana/errors": "2.0.0-preview.4",

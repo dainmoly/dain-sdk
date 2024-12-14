@@ -172,7 +172,6 @@ import { TransactionParamProcessor } from "./tx/txParamProcessor";
 import { isOracleValid, trimVaaSignatures } from "./math/oracles";
 import { TxHandler } from "./tx/txHandler";
 import pythSolanaReceiverIdl from "./idl/pyth_solana_receiver.json";
-import { gprcClientAccountSubscriber } from "./accounts/grpcClientAccountSubscriber";
 
 import { getFeedIdUint8Array, trimFeedId } from "./util/pythPullOracleUtils";
 import { isVersionedTransaction } from "./tx/utils";
@@ -258,12 +257,12 @@ export class DainClient {
       config.connection,
       // @ts-ignore
       config.wallet,
-      this.opts,
+      this.opts
     );
     this.program = new Program(
       driftIDL as Idl,
       config.programID ?? new PublicKey(DRIFT_PROGRAM_ID),
-      this.provider,
+      this.provider
     );
     this.swiftID = config.swiftID ?? new PublicKey(SWIFT_ID);
 
@@ -294,27 +293,27 @@ export class DainClient {
 
     if (config.includeDelegates && config.subAccountIds) {
       throw new Error(
-        "Can only pass one of includeDelegates or subAccountIds. If you want to specify subaccount ids for multiple authorities, pass authoritySubaccountMap instead",
+        "Can only pass one of includeDelegates or subAccountIds. If you want to specify subaccount ids for multiple authorities, pass authoritySubaccountMap instead"
       );
     }
 
     if (config.authoritySubAccountMap && config.subAccountIds) {
       throw new Error(
-        "Can only pass one of authoritySubaccountMap or subAccountIds",
+        "Can only pass one of authoritySubaccountMap or subAccountIds"
       );
     }
 
     if (config.authoritySubAccountMap && config.includeDelegates) {
       throw new Error(
-        "Can only pass one of authoritySubaccountMap or includeDelegates",
+        "Can only pass one of authoritySubaccountMap or includeDelegates"
       );
     }
 
     this.authoritySubAccountMap = config.authoritySubAccountMap
       ? config.authoritySubAccountMap
       : config.subAccountIds
-        ? new Map([[this.authority.toString(), config.subAccountIds]])
-        : new Map<string, number[]>();
+      ? new Map([[this.authority.toString(), config.subAccountIds]])
+      : new Map<string, number[]>();
 
     this.includeDelegates = config.includeDelegates ?? false;
     if (config.accountSubscription?.type === "polling") {
@@ -325,19 +324,6 @@ export class DainClient {
       this.userStatsAccountSubscriptionConfig = {
         type: "polling",
         accountLoader: config.accountSubscription.accountLoader,
-      };
-    } else if (config.accountSubscription?.type === "grpc") {
-      this.userAccountSubscriptionConfig = {
-        type: "grpc",
-        resubTimeoutMs: config.accountSubscription?.resubTimeoutMs,
-        logResubMessages: config.accountSubscription?.logResubMessages,
-        grpcConfigs: config.accountSubscription?.grpcConfigs,
-      };
-      this.userStatsAccountSubscriptionConfig = {
-        type: "grpc",
-        grpcConfigs: config.accountSubscription?.grpcConfigs,
-        resubTimeoutMs: config.accountSubscription?.resubTimeoutMs,
-        logResubMessages: config.accountSubscription?.logResubMessages,
       };
     } else {
       this.userAccountSubscriptionConfig = {
@@ -359,7 +345,7 @@ export class DainClient {
         dainClient: this,
         userStatsAccountPublicKey: getUserStatsAccountPublicKey(
           this.program.programId,
-          this.authority,
+          this.authority
         ),
         accountSubscription: this.userAccountSubscriptionConfig,
       });
@@ -368,7 +354,7 @@ export class DainClient {
     this.marketLookupTable = config.marketLookupTable;
     if (config.env && !this.marketLookupTable) {
       this.marketLookupTable = new PublicKey(
-        configs[config.env].MARKET_LOOKUP_TABLE,
+        configs[config.env].MARKET_LOOKUP_TABLE
       );
     }
 
@@ -386,21 +372,7 @@ export class DainClient {
         config.spotMarketIndexes ?? [],
         config.oracleInfos ?? [],
         noMarketsAndOraclesSpecified,
-        delistedMarketSetting,
-      );
-    } else if (config.accountSubscription?.type === "grpc") {
-      this.accountSubscriber = new gprcClientAccountSubscriber(
-        config.accountSubscription.grpcConfigs,
-        this.program,
-        config.perpMarketIndexes ?? [],
-        config.spotMarketIndexes ?? [],
-        config.oracleInfos ?? [],
-        noMarketsAndOraclesSpecified,
-        delistedMarketSetting,
-        {
-          resubTimeoutMs: config.accountSubscription?.resubTimeoutMs,
-          logResubMessages: config.accountSubscription?.logResubMessages,
-        },
+        delistedMarketSetting
       );
     } else {
       this.accountSubscriber = new WebSocketClientAccountSubscriber(
@@ -414,7 +386,7 @@ export class DainClient {
           resubTimeoutMs: config.accountSubscription?.resubTimeoutMs,
           logResubMessages: config.accountSubscription?.logResubMessages,
         },
-        config.accountSubscription?.commitment,
+        config.accountSubscription?.commitment
       );
     }
     this.eventEmitter = this.accountSubscriber.eventEmitter;
@@ -445,12 +417,12 @@ export class DainClient {
   createUser(
     subAccountId: number,
     accountSubscriptionConfig: UserSubscriptionConfig,
-    authority?: PublicKey,
+    authority?: PublicKey
   ): User {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       authority ?? this.authority,
-      subAccountId,
+      subAccountId
     );
 
     return new User({
@@ -462,14 +434,14 @@ export class DainClient {
 
   public async subscribe(): Promise<boolean> {
     let subscribePromises = [this.addAndSubscribeToUsers()].concat(
-      this.accountSubscriber.subscribe(),
+      this.accountSubscriber.subscribe()
     );
 
     if (this.userStats !== undefined) {
       subscribePromises = subscribePromises.concat(this.userStats.subscribe());
     }
     this.isSubscribed = (await Promise.all(subscribePromises)).reduce(
-      (success, prevSuccess) => success && prevSuccess,
+      (success, prevSuccess) => success && prevSuccess
     );
 
     return this.isSubscribed;
@@ -494,11 +466,11 @@ export class DainClient {
 
   public async unsubscribe(): Promise<void> {
     let unsubscribePromises = this.unsubscribeUsers().concat(
-      this.accountSubscriber.unsubscribe(),
+      this.accountSubscriber.unsubscribe()
     );
     if (this.userStats !== undefined) {
       unsubscribePromises = unsubscribePromises.concat(
-        this.userStats.unsubscribe(),
+        this.userStats.unsubscribe()
       );
     }
     await Promise.all(unsubscribePromises);
@@ -515,7 +487,7 @@ export class DainClient {
       return this.statePublicKey;
     }
     this.statePublicKey = await getDriftStateAccountPublicKey(
-      this.program.programId,
+      this.program.programId
     );
     return this.statePublicKey;
   }
@@ -542,7 +514,7 @@ export class DainClient {
   }
 
   public getPerpMarketAccount(
-    marketIndex: number,
+    marketIndex: number
   ): PerpMarketAccount | undefined {
     return this.accountSubscriber.getMarketAccountAndSlot(marketIndex)?.data;
   }
@@ -552,7 +524,7 @@ export class DainClient {
    * @param marketIndex
    */
   public async forceGetPerpMarketAccount(
-    marketIndex: number,
+    marketIndex: number
   ): Promise<PerpMarketAccount | undefined> {
     await this.accountSubscriber.fetch();
     let data =
@@ -574,7 +546,7 @@ export class DainClient {
   }
 
   public getSpotMarketAccount(
-    marketIndex: number,
+    marketIndex: number
   ): SpotMarketAccount | undefined {
     return this.accountSubscriber.getSpotMarketAccountAndSlot(marketIndex).data;
   }
@@ -584,7 +556,7 @@ export class DainClient {
    * @param marketIndex
    */
   public async forceGetSpotMarketAccount(
-    marketIndex: number,
+    marketIndex: number
   ): Promise<SpotMarketAccount | undefined> {
     await this.accountSubscriber.fetch();
     return this.accountSubscriber.getSpotMarketAccountAndSlot(marketIndex).data;
@@ -599,28 +571,28 @@ export class DainClient {
 
   public getQuoteSpotMarketAccount(): SpotMarketAccount {
     return this.accountSubscriber.getSpotMarketAccountAndSlot(
-      QUOTE_SPOT_MARKET_INDEX,
+      QUOTE_SPOT_MARKET_INDEX
     ).data;
   }
 
   public getOraclePriceDataAndSlot(
     oraclePublicKey: PublicKey,
-    oracleSource: OracleSource,
+    oracleSource: OracleSource
   ): DataAndSlot<OraclePriceData> | undefined {
     return this.accountSubscriber.getOraclePriceDataAndSlot(
-      getOracleId(oraclePublicKey, oracleSource),
+      getOracleId(oraclePublicKey, oracleSource)
     );
   }
 
   public async getSerumV3FulfillmentConfig(
-    serumMarket: PublicKey,
+    serumMarket: PublicKey
   ): Promise<SerumV3FulfillmentConfigAccount> {
     const address = await getSerumFulfillmentConfigPublicKey(
       this.program.programId,
-      serumMarket,
+      serumMarket
     );
     return (await this.program.account.serumV3FulfillmentConfig.fetch(
-      address,
+      address
     )) as SerumV3FulfillmentConfigAccount;
   }
 
@@ -629,19 +601,19 @@ export class DainClient {
   > {
     const accounts = await this.program.account.serumV3FulfillmentConfig.all();
     return accounts.map(
-      (account) => account.account,
+      (account) => account.account
     ) as SerumV3FulfillmentConfigAccount[];
   }
 
   public async getPhoenixV1FulfillmentConfig(
-    phoenixMarket: PublicKey,
+    phoenixMarket: PublicKey
   ): Promise<PhoenixV1FulfillmentConfigAccount> {
     const address = await getPhoenixFulfillmentConfigPublicKey(
       this.program.programId,
-      phoenixMarket,
+      phoenixMarket
     );
     return (await this.program.account.phoenixV1FulfillmentConfig.fetch(
-      address,
+      address
     )) as PhoenixV1FulfillmentConfigAccount;
   }
 
@@ -651,19 +623,19 @@ export class DainClient {
     const accounts =
       await this.program.account.phoenixV1FulfillmentConfig.all();
     return accounts.map(
-      (account) => account.account,
+      (account) => account.account
     ) as PhoenixV1FulfillmentConfigAccount[];
   }
 
   public async getOpenbookV2FulfillmentConfig(
-    openbookMarket: PublicKey,
+    openbookMarket: PublicKey
   ): Promise<OpenbookV2FulfillmentConfigAccount> {
     const address = getOpenbookV2FulfillmentConfigPublicKey(
       this.program.programId,
-      openbookMarket,
+      openbookMarket
     );
     return (await this.program.account.openbookV2FulfillmentConfig.fetch(
-      address,
+      address
     )) as OpenbookV2FulfillmentConfigAccount;
   }
 
@@ -673,7 +645,7 @@ export class DainClient {
     const accounts =
       await this.program.account.openbookV2FulfillmentConfig.all();
     return accounts.map(
-      (account) => account.account,
+      (account) => account.account
     ) as OpenbookV2FulfillmentConfigAccount[];
   }
 
@@ -705,18 +677,18 @@ export class DainClient {
     subAccountIds?: number[],
     activeSubAccountId?: number,
     includeDelegates?: boolean,
-    authoritySubaccountMap?: Map<string, number[]>,
+    authoritySubaccountMap?: Map<string, number[]>
   ): Promise<boolean> {
     const newProvider = new AnchorProvider(
       this.connection,
       // @ts-ignore
       newWallet,
-      this.opts,
+      this.opts
     );
     const newProgram = new Program(
       driftIDL as Idl,
       this.program.programId,
-      newProvider,
+      newProvider
     );
 
     this.skipLoadUsers = false;
@@ -737,27 +709,27 @@ export class DainClient {
 
     if (includeDelegates && subAccountIds) {
       throw new Error(
-        "Can only pass one of includeDelegates or subAccountIds. If you want to specify subaccount ids for multiple authorities, pass authoritySubaccountMap instead",
+        "Can only pass one of includeDelegates or subAccountIds. If you want to specify subaccount ids for multiple authorities, pass authoritySubaccountMap instead"
       );
     }
 
     if (authoritySubaccountMap && subAccountIds) {
       throw new Error(
-        "Can only pass one of authoritySubaccountMap or subAccountIds",
+        "Can only pass one of authoritySubaccountMap or subAccountIds"
       );
     }
 
     if (authoritySubaccountMap && includeDelegates) {
       throw new Error(
-        "Can only pass one of authoritySubaccountMap or includeDelegates",
+        "Can only pass one of authoritySubaccountMap or includeDelegates"
       );
     }
 
     this.authoritySubAccountMap = authoritySubaccountMap
       ? authoritySubaccountMap
       : subAccountIds
-        ? new Map([[this.authority.toString(), subAccountIds]])
-        : new Map<string, number[]>();
+      ? new Map([[this.authority.toString(), subAccountIds]])
+      : new Map<string, number[]>();
 
     /* Reset user stats account */
     if (this.userStats?.isSubscribed) {
@@ -837,7 +809,7 @@ export class DainClient {
     this.authority = authority ?? this.authority;
     this.userStatsAccountPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      this.authority,
+      this.authority
     );
 
     /* If changing the user authority ie switching from delegate to non-delegate account, need to re-subscribe to the user stats account */
@@ -859,7 +831,7 @@ export class DainClient {
   public async addUser(
     subAccountId: number,
     authority?: PublicKey,
-    userAccount?: UserAccount,
+    userAccount?: UserAccount
   ): Promise<boolean> {
     authority = authority ?? this.authority;
     const userKey = this.getUserMapKey(subAccountId, authority);
@@ -871,7 +843,7 @@ export class DainClient {
     const user = this.createUser(
       subAccountId,
       this.userAccountSubscriptionConfig,
-      authority,
+      authority
     );
 
     const result = await user.subscribe(userAccount);
@@ -906,8 +878,8 @@ export class DainClient {
           [...this.authoritySubAccountMap.values()][0][0] ?? 0,
           new PublicKey(
             [...this.authoritySubAccountMap.keys()][0] ??
-              this.authority.toString(),
-          ),
+              this.authority.toString()
+          )
         );
       }
     } else {
@@ -915,12 +887,12 @@ export class DainClient {
       let delegatedAccounts = [];
 
       const userAccountsPromise = this.getUserAccountsForAuthority(
-        authority ?? this.wallet.publicKey,
+        authority ?? this.wallet.publicKey
       );
 
       if (this.includeDelegates) {
         const delegatedAccountsPromise = this.getUserAccountsForDelegate(
-          authority ?? this.wallet.publicKey,
+          authority ?? this.wallet.publicKey
         );
         [userAccounts, delegatedAccounts] = await Promise.all([
           userAccountsPromise,
@@ -935,7 +907,7 @@ export class DainClient {
 
       const allAccounts = userAccounts.concat(delegatedAccounts);
       const addAllAccountsPromise = allAccounts.map((acc) =>
-        this.addUser(acc.subAccountId, acc.authority, acc),
+        this.addUser(acc.subAccountId, acc.authority, acc)
       );
 
       const addAllAccountsResults = await Promise.all(addAllAccountsPromise);
@@ -944,8 +916,7 @@ export class DainClient {
       if (this.activeSubAccountId == undefined) {
         this.switchActiveUser(
           userAccounts.concat(delegatedAccounts)[0]?.subAccountId ?? 0,
-          userAccounts.concat(delegatedAccounts)[0]?.authority ??
-            this.authority,
+          userAccounts.concat(delegatedAccounts)[0]?.authority ?? this.authority
         );
       }
     }
@@ -957,7 +928,7 @@ export class DainClient {
     subAccountId = 0,
     name?: string,
     referrerInfo?: ReferrerInfo,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<[TransactionSignature, PublicKey]> {
     const initializeIxs = [];
 
@@ -965,7 +936,7 @@ export class DainClient {
       await this.getInitializeUserInstructions(
         subAccountId,
         name,
-        referrerInfo,
+        referrerInfo
       );
 
     if (subAccountId === 0) {
@@ -1001,7 +972,7 @@ export class DainClient {
 
   public async initializeRFQUser(
     userAccountPublicKey: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<[TransactionSignature, PublicKey]> {
     const initializeIxs = [];
 
@@ -1015,11 +986,11 @@ export class DainClient {
   }
 
   async getInitializeRFQUserInstruction(
-    userAccountPublicKey: PublicKey,
+    userAccountPublicKey: PublicKey
   ): Promise<[PublicKey, TransactionInstruction]> {
     const rfqUserAccountPublicKey = getRFQUserAccountPublicKey(
       this.program.programId,
-      userAccountPublicKey,
+      userAccountPublicKey
     );
     const initializeUserAccountIx =
       await this.program.instruction.initializeRfqUser({
@@ -1039,14 +1010,14 @@ export class DainClient {
   public async initializeSwiftUserOrders(
     userAccountPublicKey: PublicKey,
     numOrders: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<[TransactionSignature, PublicKey]> {
     const initializeIxs = [];
 
     const [swiftUserAccountPublicKey, initializeUserAccountIx] =
       await this.getInitializeSwiftUserOrdersAccountIx(
         userAccountPublicKey,
-        numOrders,
+        numOrders
       );
     initializeIxs.push(initializeUserAccountIx);
     const tx = await this.buildTransaction(initializeIxs, txParams);
@@ -1057,11 +1028,11 @@ export class DainClient {
 
   async getInitializeSwiftUserOrdersAccountIx(
     userAccountPublicKey: PublicKey,
-    numOrders: number,
+    numOrders: number
   ): Promise<[PublicKey, TransactionInstruction]> {
     const swiftUserAccountPublicKey = getSwiftUserAccountPublicKey(
       this.program.programId,
-      userAccountPublicKey,
+      userAccountPublicKey
     );
     const initializeUserAccountIx =
       await this.program.instruction.initializeSwiftUserOrders(numOrders, {
@@ -1081,11 +1052,11 @@ export class DainClient {
   public async resizeSwiftUserOrders(
     userAccountPublicKey: PublicKey,
     numOrders: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const resizeUserAccountIx = await this.getResizeSwiftUserOrdersInstruction(
       userAccountPublicKey,
-      numOrders,
+      numOrders
     );
     const tx = await this.buildTransaction([resizeUserAccountIx], txParams);
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -1095,11 +1066,11 @@ export class DainClient {
 
   async getResizeSwiftUserOrdersInstruction(
     userAccountPublicKey: PublicKey,
-    numOrders: number,
+    numOrders: number
   ): Promise<TransactionInstruction> {
     const swiftUserAccountPublicKey = getSwiftUserAccountPublicKey(
       this.program.programId,
-      userAccountPublicKey,
+      userAccountPublicKey
     );
     const resizeUserAccountIx =
       await this.program.instruction.resizeSwiftUserOrders(numOrders, {
@@ -1117,12 +1088,12 @@ export class DainClient {
   async getInitializeUserInstructions(
     subAccountId = 0,
     name?: string,
-    referrerInfo?: ReferrerInfo,
+    referrerInfo?: ReferrerInfo
   ): Promise<[PublicKey, TransactionInstruction]> {
     const userAccountPublicKey = await getUserAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     const remainingAccounts = new Array<AccountMeta>();
@@ -1143,7 +1114,7 @@ export class DainClient {
     if (!state.whitelistMint.equals(PublicKey.default)) {
       const associatedTokenPublicKey = await getAssociatedTokenAddress(
         state.whitelistMint,
-        this.wallet.publicKey,
+        this.wallet.publicKey
       );
       remainingAccounts.push({
         pubkey: associatedTokenPublicKey,
@@ -1185,7 +1156,7 @@ export class DainClient {
       userStatsAccount = await fetchUserStatsAccount(
         this.connection,
         this.program,
-        this.wallet.publicKey,
+        this.wallet.publicKey
       );
     } else {
       userStatsAccount = userStats.getAccount();
@@ -1194,19 +1165,19 @@ export class DainClient {
   }
 
   public async initializeReferrerName(
-    name: string,
+    name: string
   ): Promise<TransactionSignature> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      0,
+      0
     );
 
     const nameBuffer = encodeName(name);
 
     const referrerNameAccountPublicKey = getReferrerNamePublicKeySync(
       this.program.programId,
-      nameBuffer,
+      nameBuffer
     );
 
     const tx = await this.program.transaction.initializeReferrerName(
@@ -1221,7 +1192,7 @@ export class DainClient {
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
-      },
+      }
     );
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
     return txSig;
@@ -1229,12 +1200,12 @@ export class DainClient {
 
   public async updateUserName(
     name: string,
-    subAccountId = 0,
+    subAccountId = 0
   ): Promise<TransactionSignature> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     const nameBuffer = encodeName(name);
@@ -1246,7 +1217,7 @@ export class DainClient {
           user: userAccountPublicKey,
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
     return txSig;
@@ -1254,16 +1225,16 @@ export class DainClient {
 
   public async updateUserCustomMarginRatio(
     updates: { marginRatio: number; subAccountId: number }[],
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const ixs = await Promise.all(
       updates.map(async ({ marginRatio, subAccountId }) => {
         const ix = await this.getUpdateUserCustomMarginRatioIx(
           marginRatio,
-          subAccountId,
+          subAccountId
         );
         return ix;
-      }),
+      })
     );
 
     const tx = await this.buildTransaction(ixs, txParams ?? this.txParams);
@@ -1274,12 +1245,12 @@ export class DainClient {
 
   public async getUpdateUserCustomMarginRatioIx(
     marginRatio: number,
-    subAccountId = 0,
+    subAccountId = 0
   ): Promise<TransactionInstruction> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     await this.addUser(subAccountId, this.wallet.publicKey);
@@ -1292,7 +1263,7 @@ export class DainClient {
           user: userAccountPublicKey,
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     return ix;
@@ -1301,14 +1272,14 @@ export class DainClient {
   public async getUpdateUserMarginTradingEnabledIx(
     marginTradingEnabled: boolean,
     subAccountId = 0,
-    userAccountPublicKey?: PublicKey,
+    userAccountPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const userAccountPublicKeyToUse =
       userAccountPublicKey ||
       getUserAccountPublicKeySync(
         this.program.programId,
         this.wallet.publicKey,
-        subAccountId,
+        subAccountId
       );
 
     await this.addUser(subAccountId, this.wallet.publicKey);
@@ -1331,20 +1302,20 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
   public async updateUserMarginTradingEnabled(
-    updates: { marginTradingEnabled: boolean; subAccountId: number }[],
+    updates: { marginTradingEnabled: boolean; subAccountId: number }[]
   ): Promise<TransactionSignature> {
     const ixs = await Promise.all(
       updates.map(async ({ marginTradingEnabled, subAccountId }) => {
         return await this.getUpdateUserMarginTradingEnabledIx(
           marginTradingEnabled,
-          subAccountId,
+          subAccountId
         );
-      }),
+      })
     );
 
     const tx = await this.buildTransaction(ixs, this.txParams);
@@ -1355,7 +1326,7 @@ export class DainClient {
 
   public async updateUserDelegate(
     delegate: PublicKey,
-    subAccountId = 0,
+    subAccountId = 0
   ): Promise<TransactionSignature> {
     const tx = await this.program.transaction.updateUserDelegate(
       subAccountId,
@@ -1365,7 +1336,7 @@ export class DainClient {
           user: await this.getUserAccountPublicKey(),
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -1373,12 +1344,12 @@ export class DainClient {
   }
 
   public async updateUserAdvancedLp(
-    updates: { advancedLp: boolean; subAccountId: number }[],
+    updates: { advancedLp: boolean; subAccountId: number }[]
   ): Promise<TransactionSignature> {
     const ixs = await Promise.all(
       updates.map(async ({ advancedLp, subAccountId }) => {
         return await this.getUpdateAdvancedDlpIx(advancedLp, subAccountId);
-      }),
+      })
     );
 
     const tx = await this.buildTransaction(ixs, this.txParams);
@@ -1389,7 +1360,7 @@ export class DainClient {
 
   public async getUpdateAdvancedDlpIx(
     advancedLp: boolean,
-    subAccountId: number,
+    subAccountId: number
   ) {
     const ix = await this.program.instruction.updateUserAdvancedLp(
       subAccountId,
@@ -1399,23 +1370,23 @@ export class DainClient {
           user: getUserAccountPublicKeySync(
             this.program.programId,
             this.wallet.publicKey,
-            subAccountId,
+            subAccountId
           ),
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     return ix;
   }
 
   public async updateUserReduceOnly(
-    updates: { reduceOnly: boolean; subAccountId: number }[],
+    updates: { reduceOnly: boolean; subAccountId: number }[]
   ): Promise<TransactionSignature> {
     const ixs = await Promise.all(
       updates.map(async ({ reduceOnly, subAccountId }) => {
         return await this.getUpdateUserReduceOnlyIx(reduceOnly, subAccountId);
-      }),
+      })
     );
 
     const tx = await this.buildTransaction(ixs, this.txParams);
@@ -1426,7 +1397,7 @@ export class DainClient {
 
   public async getUpdateUserReduceOnlyIx(
     reduceOnly: boolean,
-    subAccountId: number,
+    subAccountId: number
   ) {
     const ix = await this.program.instruction.updateUserReduceOnly(
       subAccountId,
@@ -1436,23 +1407,23 @@ export class DainClient {
           user: getUserAccountPublicKeySync(
             this.program.programId,
             this.wallet.publicKey,
-            subAccountId,
+            subAccountId
           ),
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     return ix;
   }
 
   public async updateUserPoolId(
-    updates: { poolId: number; subAccountId: number }[],
+    updates: { poolId: number; subAccountId: number }[]
   ): Promise<TransactionSignature> {
     const ixs = await Promise.all(
       updates.map(async ({ poolId, subAccountId }) => {
         return await this.getUpdateUserPoolIdIx(poolId, subAccountId);
-      }),
+      })
     );
 
     const tx = await this.buildTransaction(ixs, this.txParams);
@@ -1470,30 +1441,30 @@ export class DainClient {
           user: getUserAccountPublicKeySync(
             this.program.programId,
             this.wallet.publicKey,
-            subAccountId,
+            subAccountId
           ),
           authority: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     return ix;
   }
 
   public async fetchAllUserAccounts(
-    includeIdle = true,
+    includeIdle = true
   ): Promise<ProgramAccount<UserAccount>[]> {
     let filters = undefined;
     if (!includeIdle) {
       filters = [getNonIdleUserFilter()];
     }
     return (await this.program.account.user.all(
-      filters,
+      filters
     )) as ProgramAccount<UserAccount>[];
   }
 
   public async getUserAccountsForDelegate(
-    delegate: PublicKey,
+    delegate: PublicKey
   ): Promise<UserAccount[]> {
     const programAccounts = await this.program.account.user.all([
       {
@@ -1511,7 +1482,7 @@ export class DainClient {
   }
 
   public async getUserAccountsAndAddressesForAuthority(
-    authority: PublicKey,
+    authority: PublicKey
   ): Promise<ProgramAccount<UserAccount>[]> {
     const programAccounts = await this.program.account.user.all([
       {
@@ -1524,12 +1495,12 @@ export class DainClient {
     ]);
 
     return programAccounts.map(
-      (programAccount) => programAccount as ProgramAccount<UserAccount>,
+      (programAccount) => programAccount as ProgramAccount<UserAccount>
     );
   }
 
   public async getUserAccountsForAuthority(
-    authority: PublicKey,
+    authority: PublicKey
   ): Promise<UserAccount[]> {
     const programAccounts = await this.program.account.user.all([
       {
@@ -1547,7 +1518,7 @@ export class DainClient {
   }
 
   public async getReferredUserStatsAccountsByReferrer(
-    referrer: PublicKey,
+    referrer: PublicKey
   ): Promise<UserStatsAccount[]> {
     const programAccounts = await this.program.account.userStats.all([
       {
@@ -1560,12 +1531,12 @@ export class DainClient {
     ]);
 
     return programAccounts.map(
-      (programAccount) => programAccount.account as UserStatsAccount,
+      (programAccount) => programAccount.account as UserStatsAccount
     );
   }
 
   public async getReferrerNameAccountsForAuthority(
-    authority: PublicKey,
+    authority: PublicKey
   ): Promise<ReferrerNameAccount[]> {
     const programAccounts = await this.program.account.referrerName.all([
       {
@@ -1578,18 +1549,18 @@ export class DainClient {
     ]);
 
     return programAccounts.map(
-      (programAccount) => programAccount.account as ReferrerNameAccount,
+      (programAccount) => programAccount.account as ReferrerNameAccount
     );
   }
 
   public async deleteUser(
     subAccountId = 0,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     const ix = await this.getUserDeletionIx(userAccountPublicKey);
@@ -1597,7 +1568,7 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(ix, txParams),
       [],
-      this.opts,
+      this.opts
     );
 
     const userMapKey = this.getUserMapKey(subAccountId, this.wallet.publicKey);
@@ -1623,11 +1594,11 @@ export class DainClient {
   public async forceDeleteUser(
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const tx = await this.buildTransaction(
       await this.getForceDeleteUserIx(userAccountPublicKey, userAccount),
-      txParams,
+      txParams
     );
 
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -1636,7 +1607,7 @@ export class DainClient {
 
   public async getForceDeleteUserIx(
     userAccountPublicKey: PublicKey,
-    userAccount: UserAccount,
+    userAccount: UserAccount
   ) {
     const writableSpotMarketIndexes = [];
     for (const spotPosition of userAccount.spotPositions) {
@@ -1665,7 +1636,7 @@ export class DainClient {
       const keeperVault = await this.getAssociatedTokenAccount(
         spotPosition.marketIndex,
         false,
-        tokenProgram,
+        tokenProgram
       );
       remainingAccounts.push({
         isSigner: false,
@@ -1686,7 +1657,7 @@ export class DainClient {
     const authority = userAccount.authority;
     const userStats = getUserStatsAccountPublicKey(
       this.program.programId,
-      authority,
+      authority
     );
     const ix = await this.program.instruction.forceDeleteUser({
       accounts: {
@@ -1705,12 +1676,12 @@ export class DainClient {
 
   public async deleteSwiftUserOrders(
     subAccountId = 0,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     const ix = await this.getSwiftUserOrdersDeletionIx(userAccountPublicKey);
@@ -1718,7 +1689,7 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(ix, txParams),
       [],
-      this.opts,
+      this.opts
     );
 
     const userMapKey = this.getUserMapKey(subAccountId, this.wallet.publicKey);
@@ -1734,7 +1705,7 @@ export class DainClient {
         user: userAccountPublicKey,
         swiftUserOrders: getSwiftUserAccountPublicKey(
           this.program.programId,
-          userAccountPublicKey,
+          userAccountPublicKey
         ),
         authority: this.wallet.publicKey,
         state: await this.getStatePublicKey(),
@@ -1746,12 +1717,12 @@ export class DainClient {
 
   public async reclaimRent(
     subAccountId = 0,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const userAccountPublicKey = getUserAccountPublicKeySync(
       this.program.programId,
       this.wallet.publicKey,
-      subAccountId,
+      subAccountId
     );
 
     const ix = await this.getReclaimRentIx(userAccountPublicKey);
@@ -1759,7 +1730,7 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(ix, txParams),
       [],
-      this.opts,
+      this.opts
     );
 
     return txSig;
@@ -1800,13 +1771,13 @@ export class DainClient {
     // delegate users get added to the end
     return [...this.users.values()]
       .filter((acct) =>
-        acct.getUserAccount().authority.equals(this.wallet.publicKey),
+        acct.getUserAccount().authority.equals(this.wallet.publicKey)
       )
       .concat(
         [...this.users.values()].filter(
           (acct) =>
-            !acct.getUserAccount().authority.equals(this.wallet.publicKey),
-        ),
+            !acct.getUserAccount().authority.equals(this.wallet.publicKey)
+        )
       );
   }
 
@@ -1815,15 +1786,15 @@ export class DainClient {
   }
 
   public async fetchReferrerNameAccount(
-    name: string,
+    name: string
   ): Promise<ReferrerNameAccount | undefined> {
     const nameBuffer = encodeName(name);
     const referrerNameAccountPublicKey = getReferrerNamePublicKeySync(
       this.program.programId,
-      nameBuffer,
+      nameBuffer
     );
     return (await this.program.account.referrerName.fetch(
-      referrerNameAccountPublicKey,
+      referrerNameAccountPublicKey
     )) as ReferrerNameAccount;
   }
 
@@ -1835,21 +1806,21 @@ export class DainClient {
 
     this.userStatsAccountPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      this.authority,
+      this.authority
     );
     return this.userStatsAccountPublicKey;
   }
 
   public async getUserAccountPublicKey(
     subAccountId?: number,
-    authority?: PublicKey,
+    authority?: PublicKey
   ): Promise<PublicKey> {
     return this.getUser(subAccountId, authority).userAccountPublicKey;
   }
 
   public getUserAccount(
     subAccountId?: number,
-    authority?: PublicKey,
+    authority?: PublicKey
   ): UserAccount | undefined {
     return this.getUser(subAccountId, authority).getUserAccount();
   }
@@ -1859,24 +1830,24 @@ export class DainClient {
    * @param subAccountId
    */
   public async forceGetUserAccount(
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<UserAccount | undefined> {
     await this.getUser(subAccountId).fetchAccounts();
     return this.getUser(subAccountId).getUserAccount();
   }
 
   public getUserAccountAndSlot(
-    subAccountId?: number,
+    subAccountId?: number
   ): DataAndSlot<UserAccount> | undefined {
     return this.getUser(subAccountId).getUserAccountAndSlot();
   }
 
   public getSpotPosition(
     marketIndex: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): SpotPosition | undefined {
     return this.getUserAccount(subAccountId).spotPositions.find(
-      (spotPosition) => spotPosition.marketIndex === marketIndex,
+      (spotPosition) => spotPosition.marketIndex === marketIndex
     );
   }
 
@@ -1899,9 +1870,9 @@ export class DainClient {
       getTokenAmount(
         spotPosition.scaledBalance,
         spotMarket,
-        spotPosition.balanceType,
+        spotPosition.balanceType
       ),
-      spotPosition.balanceType,
+      spotPosition.balanceType
     );
   }
 
@@ -1981,7 +1952,7 @@ export class DainClient {
             false,
             oracleAccountMap,
             spotMarketAccountMap,
-            perpMarketAccountMap,
+            perpMarketAccountMap
           );
         } else {
           this.perpMarketLastSlotCache.delete(marketIndex);
@@ -1999,7 +1970,7 @@ export class DainClient {
             marketIndex,
             false,
             oracleAccountMap,
-            spotMarketAccountMap,
+            spotMarketAccountMap
           );
         } else {
           this.spotMarketLastSlotCache.delete(marketIndex);
@@ -2009,7 +1980,7 @@ export class DainClient {
 
     if (params.readablePerpMarketIndex !== undefined) {
       const readablePerpMarketIndexes = Array.isArray(
-        params.readablePerpMarketIndex,
+        params.readablePerpMarketIndex
       )
         ? params.readablePerpMarketIndex
         : [params.readablePerpMarketIndex];
@@ -2019,7 +1990,7 @@ export class DainClient {
           false,
           oracleAccountMap,
           spotMarketAccountMap,
-          perpMarketAccountMap,
+          perpMarketAccountMap
         );
       }
     }
@@ -2030,7 +2001,7 @@ export class DainClient {
         false,
         oracleAccountMap,
         spotMarketAccountMap,
-        perpMarketAccountMap,
+        perpMarketAccountMap
       );
     }
 
@@ -2040,7 +2011,7 @@ export class DainClient {
           readableSpotMarketIndex,
           false,
           oracleAccountMap,
-          spotMarketAccountMap,
+          spotMarketAccountMap
         );
       }
     }
@@ -2050,7 +2021,7 @@ export class DainClient {
         spotMarketIndex,
         false,
         oracleAccountMap,
-        spotMarketAccountMap,
+        spotMarketAccountMap
       );
     }
 
@@ -2061,7 +2032,7 @@ export class DainClient {
           true,
           oracleAccountMap,
           spotMarketAccountMap,
-          perpMarketAccountMap,
+          perpMarketAccountMap
         );
       }
     }
@@ -2072,7 +2043,7 @@ export class DainClient {
           writableSpotMarketIndex,
           true,
           oracleAccountMap,
-          spotMarketAccountMap,
+          spotMarketAccountMap
         );
       }
     }
@@ -2089,7 +2060,7 @@ export class DainClient {
     writable: boolean,
     oracleAccountMap: Map<string, AccountMeta>,
     spotMarketAccountMap: Map<number, AccountMeta>,
-    perpMarketAccountMap: Map<number, AccountMeta>,
+    perpMarketAccountMap: Map<number, AccountMeta>
   ): void {
     const perpMarketAccount = this.getPerpMarketAccount(marketIndex);
     perpMarketAccountMap.set(marketIndex, {
@@ -2108,7 +2079,7 @@ export class DainClient {
       perpMarketAccount.quoteSpotMarketIndex,
       false,
       oracleAccountMap,
-      spotMarketAccountMap,
+      spotMarketAccountMap
     );
   }
 
@@ -2116,7 +2087,7 @@ export class DainClient {
     marketIndex: number,
     writable: boolean,
     oracleAccountMap: Map<string, AccountMeta>,
-    spotMarketAccountMap: Map<number, AccountMeta>,
+    spotMarketAccountMap: Map<number, AccountMeta>
   ): void {
     const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
     spotMarketAccountMap.set(spotMarketAccount.marketIndex, {
@@ -2149,7 +2120,7 @@ export class DainClient {
             spotPosition.marketIndex,
             false,
             oracleAccountMap,
-            spotMarketAccountMap,
+            spotMarketAccountMap
           );
 
           if (
@@ -2160,7 +2131,7 @@ export class DainClient {
               QUOTE_SPOT_MARKET_INDEX,
               false,
               oracleAccountMap,
-              spotMarketAccountMap,
+              spotMarketAccountMap
             );
           }
         }
@@ -2172,7 +2143,7 @@ export class DainClient {
             false,
             oracleAccountMap,
             spotMarketAccountMap,
-            perpMarketAccountMap,
+            perpMarketAccountMap
           );
         }
       }
@@ -2187,16 +2158,16 @@ export class DainClient {
 
   public getOrder(orderId: number, subAccountId?: number): Order | undefined {
     return this.getUserAccount(subAccountId)?.orders.find(
-      (order) => order.orderId === orderId,
+      (order) => order.orderId === orderId
     );
   }
 
   public getOrderByUserId(
     userOrderId: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): Order | undefined {
     return this.getUserAccount(subAccountId)?.orders.find(
-      (order) => order.userOrderId === userOrderId,
+      (order) => order.userOrderId === userOrderId
     );
   }
 
@@ -2209,7 +2180,7 @@ export class DainClient {
   public async getAssociatedTokenAccount(
     marketIndex: number,
     useNative = true,
-    tokenProgram = TOKEN_PROGRAM_ID,
+    tokenProgram = TOKEN_PROGRAM_ID
   ): Promise<PublicKey> {
     const spotMarket = this.getSpotMarketAccount(marketIndex);
     if (useNative && spotMarket.mint.equals(WRAPPED_SOL_MINT)) {
@@ -2220,7 +2191,7 @@ export class DainClient {
       mint,
       this.wallet.publicKey,
       undefined,
-      tokenProgram,
+      tokenProgram
     );
   }
 
@@ -2229,7 +2200,7 @@ export class DainClient {
     payer: PublicKey,
     owner: PublicKey,
     mint: PublicKey,
-    tokenProgram = TOKEN_PROGRAM_ID,
+    tokenProgram = TOKEN_PROGRAM_ID
   ): TransactionInstruction {
     return new TransactionInstruction({
       keys: [
@@ -2254,7 +2225,7 @@ export class DainClient {
     marketIndex: number,
     associatedTokenAccount: PublicKey,
     subAccountId?: number,
-    reduceOnly = false,
+    reduceOnly = false
   ): Promise<TransactionInstruction[]> {
     const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
 
@@ -2270,7 +2241,7 @@ export class DainClient {
     if (createWSOLTokenAccount) {
       const { ixs, pubkey } = await this.getWrappedSolAccountCreationIxs(
         amount,
-        true,
+        true
       );
 
       associatedTokenAccount = pubkey;
@@ -2284,7 +2255,7 @@ export class DainClient {
       associatedTokenAccount,
       subAccountId,
       reduceOnly,
-      true,
+      true
     );
 
     instructions.push(depositCollateralIx);
@@ -2296,8 +2267,8 @@ export class DainClient {
           associatedTokenAccount,
           signerAuthority,
           signerAuthority,
-          [],
-        ),
+          []
+        )
       );
     }
 
@@ -2310,14 +2281,14 @@ export class DainClient {
     associatedTokenAccount: PublicKey,
     subAccountId?: number,
     reduceOnly = false,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<VersionedTransaction | Transaction> {
     const instructions = await this.getDepositTxnIx(
       amount,
       marketIndex,
       associatedTokenAccount,
       subAccountId,
-      reduceOnly,
+      reduceOnly
     );
 
     txParams = { ...(txParams ?? this.txParams), computeUnits: 600_000 };
@@ -2342,7 +2313,7 @@ export class DainClient {
     associatedTokenAccount: PublicKey,
     subAccountId?: number,
     reduceOnly = false,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const tx = await this.createDepositTxn(
       amount,
@@ -2350,7 +2321,7 @@ export class DainClient {
       associatedTokenAccount,
       subAccountId,
       reduceOnly,
-      txParams,
+      txParams
     );
 
     const { txSig, slot } = await this.sendTransaction(tx, [], this.opts);
@@ -2364,12 +2335,12 @@ export class DainClient {
     userTokenAccount: PublicKey,
     subAccountId?: number,
     reduceOnly = false,
-    userInitialized = true,
+    userInitialized = true
   ): Promise<TransactionInstruction> {
     const userAccountPublicKey = await getUserAccountPublicKey(
       this.program.programId,
       this.authority,
-      subAccountId ?? this.activeSubAccountId,
+      subAccountId ?? this.activeSubAccountId
     );
 
     let remainingAccounts = [];
@@ -2406,7 +2377,7 @@ export class DainClient {
           tokenProgram,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -2422,7 +2393,7 @@ export class DainClient {
 
   public async getWrappedSolAccountCreationIxs(
     amount: BN,
-    includeRent?: boolean,
+    includeRent?: boolean
   ): Promise<{
     ixs: anchor.web3.TransactionInstruction[];
     /** @deprecated - this array is always going to be empty, in the current implementation */
@@ -2438,7 +2409,7 @@ export class DainClient {
     const wrappedSolAccount = await PublicKey.createWithSeed(
       authority,
       seed,
-      TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID
     );
 
     const result = {
@@ -2462,22 +2433,22 @@ export class DainClient {
         lamports: lamports.toNumber(),
         space: 165,
         programId: TOKEN_PROGRAM_ID,
-      }),
+      })
     );
 
     result.ixs.push(
       createInitializeAccountInstruction(
         wrappedSolAccount,
         WRAPPED_SOL_MINT,
-        authority,
-      ),
+        authority
+      )
     );
 
     return result;
   }
 
   public getTokenProgramForSpotMarket(
-    spotMarketAccount: SpotMarketAccount,
+    spotMarketAccount: SpotMarketAccount
   ): PublicKey {
     if (spotMarketAccount.tokenProgram === 1) {
       return TOKEN_2022_PROGRAM_ID;
@@ -2487,7 +2458,7 @@ export class DainClient {
 
   public addTokenMintToRemainingAccounts(
     spotMarketAccount: SpotMarketAccount,
-    remainingAccounts: AccountMeta[],
+    remainingAccounts: AccountMeta[]
   ) {
     if (spotMarketAccount.tokenProgram === 1) {
       remainingAccounts.push({
@@ -2501,14 +2472,14 @@ export class DainClient {
   public getAssociatedTokenAccountCreationIx(
     tokenMintAddress: PublicKey,
     associatedTokenAddress: PublicKey,
-    tokenProgram: PublicKey,
+    tokenProgram: PublicKey
   ): anchor.web3.TransactionInstruction {
     return createAssociatedTokenAccountInstruction(
       this.wallet.publicKey,
       associatedTokenAddress,
       this.wallet.publicKey,
       tokenMintAddress,
-      tokenProgram,
+      tokenProgram
     );
   }
 
@@ -2521,7 +2492,7 @@ export class DainClient {
     fromSubAccountId?: number,
     referrerInfo?: ReferrerInfo,
     donateAmount?: BN,
-    customMaxMarginRatio?: number,
+    customMaxMarginRatio?: number
   ): Promise<{
     ixs: TransactionInstruction[];
     userAccountPublicKey: PublicKey;
@@ -2532,7 +2503,7 @@ export class DainClient {
       await this.getInitializeUserInstructions(
         subAccountId,
         name,
-        referrerInfo,
+        referrerInfo
       );
 
     const spotMarket = this.getSpotMarketAccount(marketIndex);
@@ -2575,7 +2546,7 @@ export class DainClient {
           amount,
           marketIndex,
           fromSubAccountId,
-          subAccountId,
+          subAccountId
         )
       : await this.getDepositInstruction(
           amount,
@@ -2583,7 +2554,7 @@ export class DainClient {
           userTokenAccount,
           subAccountId,
           false,
-          false,
+          false
         );
 
     if (subAccountId === 0) {
@@ -2599,7 +2570,7 @@ export class DainClient {
       const donateIx = await this.getDepositIntoSpotMarketRevenuePoolIx(
         1,
         donateAmount,
-        wsolTokenAccount,
+        wsolTokenAccount
       );
 
       ixs.push(donateIx);
@@ -2609,7 +2580,7 @@ export class DainClient {
     if (customMaxMarginRatio) {
       const customMarginRatioIx = await this.getUpdateUserCustomMarginRatioIx(
         customMaxMarginRatio,
-        subAccountId,
+        subAccountId
       );
       ixs.push(customMarginRatioIx);
     }
@@ -2621,8 +2592,8 @@ export class DainClient {
           wsolTokenAccount,
           authority,
           authority,
-          [],
-        ),
+          []
+        )
       );
     }
 
@@ -2642,7 +2613,7 @@ export class DainClient {
     referrerInfo?: ReferrerInfo,
     donateAmount?: BN,
     txParams?: TxParams,
-    customMaxMarginRatio?: number,
+    customMaxMarginRatio?: number
   ): Promise<[Transaction | VersionedTransaction, PublicKey]> {
     const { ixs, userAccountPublicKey } =
       await this.createInitializeUserAccountAndDepositCollateralIxs(
@@ -2654,7 +2625,7 @@ export class DainClient {
         fromSubAccountId,
         referrerInfo,
         donateAmount,
-        customMaxMarginRatio,
+        customMaxMarginRatio
       );
 
     const tx = await this.buildTransaction(ixs, txParams);
@@ -2685,7 +2656,7 @@ export class DainClient {
     referrerInfo?: ReferrerInfo,
     donateAmount?: BN,
     txParams?: TxParams,
-    customMaxMarginRatio?: number,
+    customMaxMarginRatio?: number
   ): Promise<[TransactionSignature, PublicKey]> {
     const [tx, userAccountPublicKey] =
       await this.createInitializeUserAccountAndDepositCollateral(
@@ -2698,14 +2669,14 @@ export class DainClient {
         referrerInfo,
         donateAmount,
         txParams,
-        customMaxMarginRatio,
+        customMaxMarginRatio
       );
     const additionalSigners: Array<Signer> = [];
 
     const { txSig, slot } = await this.sendTransaction(
       tx,
       additionalSigners,
-      this.opts,
+      this.opts
     );
     this.spotMarketLastSlotCache.set(marketIndex, slot);
 
@@ -2721,21 +2692,21 @@ export class DainClient {
     tokenFaucet: TokenFaucet,
     amount: BN,
     referrerInfo?: ReferrerInfo,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<[TransactionSignature, PublicKey]> {
     const ixs = [];
 
     const [associateTokenPublicKey, createAssociatedAccountIx, mintToIx] =
       await tokenFaucet.createAssociatedTokenAccountAndMintToInstructions(
         this.wallet.publicKey,
-        amount,
+        amount
       );
 
     const [userAccountPublicKey, initializeUserAccountIx] =
       await this.getInitializeUserInstructions(
         subAccountId,
         name,
-        referrerInfo,
+        referrerInfo
       );
 
     const depositCollateralIx = await this.getDepositInstruction(
@@ -2744,7 +2715,7 @@ export class DainClient {
       associateTokenPublicKey,
       subAccountId,
       false,
-      false,
+      false
     );
 
     ixs.push(createAssociatedAccountIx, mintToIx);
@@ -2773,7 +2744,7 @@ export class DainClient {
     associatedTokenAddress: PublicKey,
     reduceOnly = false,
     subAccountId?: number,
-    updateFuel = false,
+    updateFuel = false
   ): Promise<TransactionInstruction[]> {
     const withdrawIxs: anchor.web3.TransactionInstruction[] = [];
 
@@ -2787,7 +2758,7 @@ export class DainClient {
       const updateFuelIx = await this.getUpdateUserFuelBonusIx(
         await this.getUserAccountPublicKey(subAccountId),
         this.getUserAccount(subAccountId),
-        this.authority,
+        this.authority
       );
       withdrawIxs.push(updateFuelIx);
     }
@@ -2798,7 +2769,7 @@ export class DainClient {
     if (createWSOLTokenAccount) {
       const { ixs, pubkey } = await this.getWrappedSolAccountCreationIxs(
         amount,
-        false,
+        false
       );
 
       associatedTokenAddress = pubkey;
@@ -2806,7 +2777,7 @@ export class DainClient {
       withdrawIxs.push(...ixs);
     } else {
       const accountExists = await this.checkIfAccountExists(
-        associatedTokenAddress,
+        associatedTokenAddress
       );
 
       if (!accountExists) {
@@ -2814,7 +2785,7 @@ export class DainClient {
           this.getAssociatedTokenAccountCreationIx(
             spotMarketAccount.mint,
             associatedTokenAddress,
-            this.getTokenProgramForSpotMarket(spotMarketAccount),
+            this.getTokenProgramForSpotMarket(spotMarketAccount)
           );
 
         withdrawIxs.push(createAssociatedTokenAccountIx);
@@ -2826,7 +2797,7 @@ export class DainClient {
       spotMarketAccount.marketIndex,
       associatedTokenAddress,
       reduceOnly,
-      subAccountId,
+      subAccountId
     );
 
     withdrawIxs.push(withdrawCollateralIx);
@@ -2838,8 +2809,8 @@ export class DainClient {
           associatedTokenAddress,
           authority,
           authority,
-          [],
-        ),
+          []
+        )
       );
     }
 
@@ -2860,7 +2831,7 @@ export class DainClient {
     reduceOnly = false,
     subAccountId?: number,
     txParams?: TxParams,
-    updateFuel = false,
+    updateFuel = false
   ): Promise<TransactionSignature> {
     const additionalSigners: Array<Signer> = [];
 
@@ -2870,18 +2841,18 @@ export class DainClient {
       associatedTokenAddress,
       reduceOnly,
       subAccountId,
-      updateFuel,
+      updateFuel
     );
 
     const tx = await this.buildTransaction(
       withdrawIxs,
-      txParams ?? this.txParams,
+      txParams ?? this.txParams
     );
 
     const { txSig, slot } = await this.sendTransaction(
       tx,
       additionalSigners,
-      this.opts,
+      this.opts
     );
     this.spotMarketLastSlotCache.set(marketIndex, slot);
     return txSig;
@@ -2892,7 +2863,7 @@ export class DainClient {
     txParams?: TxParams,
     opts?: {
       dustPositionCountCallback?: (count: number) => void;
-    },
+    }
   ): Promise<TransactionSignature | undefined> {
     const user = this.getUser(subAccountId);
 
@@ -2914,7 +2885,7 @@ export class DainClient {
     for (const position of dustPositionSpotMarketAccounts) {
       const tokenAccount = await getAssociatedTokenAddress(
         position.mint,
-        this.wallet.publicKey,
+        this.wallet.publicKey
       );
 
       const tokenAmount = await user.getTokenAmount(position.marketIndex);
@@ -2924,7 +2895,7 @@ export class DainClient {
         position.marketIndex,
         tokenAccount,
         true, // reduce-only true to ensure all dust is withdrawn
-        subAccountId,
+        subAccountId
       );
 
       allWithdrawIxs = allWithdrawIxs.concat(withdrawIxs);
@@ -2932,7 +2903,7 @@ export class DainClient {
 
     const tx = await this.buildTransaction(
       allWithdrawIxs,
-      txParams ?? this.txParams,
+      txParams ?? this.txParams
     );
 
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -2945,7 +2916,7 @@ export class DainClient {
     marketIndex: number,
     userTokenAccount: PublicKey,
     reduceOnly = false,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -2978,7 +2949,7 @@ export class DainClient {
           tokenProgram,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -2995,7 +2966,7 @@ export class DainClient {
     marketIndex: number,
     fromSubAccountId: number,
     toSubAccountId: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -3003,12 +2974,12 @@ export class DainClient {
           amount,
           marketIndex,
           fromSubAccountId,
-          toSubAccountId,
+          toSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     if (
       fromSubAccountId === this.activeSubAccountId ||
@@ -3023,24 +2994,24 @@ export class DainClient {
     amount: BN,
     marketIndex: number,
     fromSubAccountId: number,
-    toSubAccountId: number,
+    toSubAccountId: number
   ): Promise<TransactionInstruction> {
     const fromUser = await getUserAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      fromSubAccountId,
+      fromSubAccountId
     );
     const toUser = await getUserAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      toSubAccountId,
+      toSubAccountId
     );
 
     let remainingAccounts;
 
     const userMapKey = this.getUserMapKey(
       fromSubAccountId,
-      this.wallet.publicKey,
+      this.wallet.publicKey
     );
     if (this.users.has(userMapKey)) {
       remainingAccounts = this.getRemainingAccounts({
@@ -3052,11 +3023,11 @@ export class DainClient {
       const userAccountPublicKey = getUserAccountPublicKeySync(
         this.program.programId,
         this.authority,
-        fromSubAccountId,
+        fromSubAccountId
       );
 
       const fromUserAccount = (await this.program.account.user.fetch(
-        userAccountPublicKey,
+        userAccountPublicKey
       )) as UserAccount;
       remainingAccounts = this.getRemainingAccounts({
         userAccounts: [fromUserAccount],
@@ -3080,21 +3051,21 @@ export class DainClient {
 
   public async updateSpotMarketCumulativeInterest(
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.updateSpotMarketCumulativeInterestIx(marketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async updateSpotMarketCumulativeInterestIx(
-    marketIndex: number,
+    marketIndex: number
   ): Promise<TransactionInstruction> {
     const spotMarket = this.getSpotMarketAccount(marketIndex);
     return await this.program.instruction.updateSpotMarketCumulativeInterest({
@@ -3110,25 +3081,25 @@ export class DainClient {
   public async settleLP(
     settleeUserAccountPublicKey: PublicKey,
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.settleLPIx(settleeUserAccountPublicKey, marketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async settleLPIx(
     settleeUserAccountPublicKey: PublicKey,
-    marketIndex: number,
+    marketIndex: number
   ): Promise<TransactionInstruction> {
     const settleeUserAccount = (await this.program.account.user.fetch(
-      settleeUserAccountPublicKey,
+      settleeUserAccountPublicKey
     )) as UserAccount;
 
     const remainingAccounts = this.getRemainingAccounts({
@@ -3149,19 +3120,19 @@ export class DainClient {
     marketIndex: number,
     sharesToBurn?: BN,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getRemovePerpLpSharesIx(
           marketIndex,
           sharesToBurn,
-          subAccountId,
+          subAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -3170,19 +3141,19 @@ export class DainClient {
     marketIndex: number,
     userAccountPublicKey: PublicKey,
     sharesToBurn?: BN,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getRemovePerpLpSharesInExpiringMarket(
           marketIndex,
           userAccountPublicKey,
-          sharesToBurn,
+          sharesToBurn
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -3190,10 +3161,10 @@ export class DainClient {
   public async getRemovePerpLpSharesInExpiringMarket(
     marketIndex: number,
     userAccountPublicKey: PublicKey,
-    sharesToBurn?: BN,
+    sharesToBurn?: BN
   ): Promise<TransactionInstruction> {
     const userAccount = (await this.program.account.user.fetch(
-      userAccountPublicKey,
+      userAccountPublicKey
     )) as UserAccount;
 
     const remainingAccounts = this.getRemainingAccounts({
@@ -3204,7 +3175,7 @@ export class DainClient {
 
     if (sharesToBurn == undefined) {
       const perpPosition = userAccount.perpPositions.filter(
-        (position) => position.marketIndex === marketIndex,
+        (position) => position.marketIndex === marketIndex
       )[0];
       sharesToBurn = perpPosition.lpShares;
       console.log("burning lp shares:", sharesToBurn.toString());
@@ -3219,14 +3190,14 @@ export class DainClient {
           user: userAccountPublicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
   public async getRemovePerpLpSharesIx(
     marketIndex: number,
     sharesToBurn?: BN,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3239,7 +3210,7 @@ export class DainClient {
     if (sharesToBurn == undefined) {
       const userAccount = this.getUserAccount(subAccountId);
       const perpPosition = userAccount.perpPositions.filter(
-        (position) => position.marketIndex === marketIndex,
+        (position) => position.marketIndex === marketIndex
       )[0];
       sharesToBurn = perpPosition.lpShares;
       console.log("burning lp shares:", sharesToBurn.toString());
@@ -3255,7 +3226,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -3263,15 +3234,15 @@ export class DainClient {
     amount: BN,
     marketIndex: number,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getAddPerpLpSharesIx(amount, marketIndex, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(marketIndex, slot);
     return txSig;
@@ -3280,7 +3251,7 @@ export class DainClient {
   public async getAddPerpLpSharesIx(
     amount: BN,
     marketIndex: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
     const remainingAccounts = this.getRemainingAccounts({
@@ -3304,16 +3275,16 @@ export class DainClient {
 
     const openBids = BN.max(
       perpMarketAccount.amm.baseAssetReserve.sub(
-        perpMarketAccount.amm.minBaseAssetReserve,
+        perpMarketAccount.amm.minBaseAssetReserve
       ),
-      ZERO,
+      ZERO
     );
 
     const openAsks = BN.max(
       perpMarketAccount.amm.maxBaseAssetReserve.sub(
-        perpMarketAccount.amm.baseAssetReserve,
+        perpMarketAccount.amm.baseAssetReserve
       ),
-      ZERO,
+      ZERO
     );
 
     const oraclePriceData = this.getOracleDataForPerpMarket(marketIndex);
@@ -3336,7 +3307,7 @@ export class DainClient {
     amount: BN,
     marketIndex: number,
     limitPrice?: BN,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     return await this.placeAndTakePerpOrder(
       {
@@ -3351,19 +3322,19 @@ export class DainClient {
       undefined,
       undefined,
       undefined,
-      subAccountId,
+      subAccountId
     );
   }
 
   public async sendSignedTx(
     tx: Transaction | VersionedTransaction,
-    opts?: ConfirmOptions,
+    opts?: ConfirmOptions
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       tx,
       undefined,
       opts ?? this.opts,
-      true,
+      true
     );
 
     return txSig;
@@ -3378,7 +3349,7 @@ export class DainClient {
     bracketOrdersParams = new Array<OptionalOrderParams>(),
     referrerInfo?: ReferrerInfo,
     cancelExistingOrders?: boolean,
-    settlePnl?: boolean,
+    settlePnl?: boolean
   ): Promise<{
     cancelExistingOrdersTx?: Transaction | VersionedTransaction;
     settlePnlTx?: Transaction | VersionedTransaction;
@@ -3405,7 +3376,7 @@ export class DainClient {
 
     ixPromisesForTxs.marketOrderTx = this.getPlaceOrdersIx(
       [orderParams, ...bracketOrdersParams],
-      userAccount.subAccountId,
+      userAccount.subAccountId
     );
 
     /* Cancel open orders in market if requested */
@@ -3414,7 +3385,7 @@ export class DainClient {
         orderParams.marketType,
         orderParams.marketIndex,
         null,
-        userAccount.subAccountId,
+        userAccount.subAccountId
       );
     }
 
@@ -3423,7 +3394,7 @@ export class DainClient {
       ixPromisesForTxs.settlePnlTx = this.settlePNLIx(
         userAccountPublicKey,
         userAccount,
-        marketIndex,
+        marketIndex
       );
     }
 
@@ -3438,7 +3409,7 @@ export class DainClient {
         },
         makerInfo,
         referrerInfo,
-        userAccount.subAccountId,
+        userAccount.subAccountId
       );
     }
 
@@ -3451,7 +3422,7 @@ export class DainClient {
 
     const txsMap = (await this.buildTransactionsMap(
       ixsMap,
-      txParams,
+      txParams
     )) as MappedRecord<typeof ixsMap, Transaction | VersionedTransaction>;
 
     return txsMap;
@@ -3477,7 +3448,7 @@ export class DainClient {
     bracketOrdersParams = new Array<OptionalOrderParams>(),
     referrerInfo?: ReferrerInfo,
     cancelExistingOrders?: boolean,
-    settlePnl?: boolean,
+    settlePnl?: boolean
   ): Promise<{
     txSig: TransactionSignature;
     signedFillTx?: Transaction;
@@ -3493,7 +3464,7 @@ export class DainClient {
       bracketOrdersParams,
       referrerInfo,
       cancelExistingOrders,
-      settlePnl,
+      settlePnl
     );
 
     const signedTxs = (
@@ -3504,7 +3475,7 @@ export class DainClient {
       signedTxs.marketOrderTx,
       [],
       this.opts,
-      true,
+      true
     );
 
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
@@ -3521,15 +3492,15 @@ export class DainClient {
   public async placePerpOrder(
     orderParams: OptionalOrderParams,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getPlacePerpOrderIx(orderParams, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
     return txSig;
@@ -3541,7 +3512,7 @@ export class DainClient {
     depositToTradeArgs?: {
       isMakingNewAccount: boolean;
       depositMarketIndex: number;
-    },
+    }
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.PERP });
 
@@ -3551,7 +3522,7 @@ export class DainClient {
       ? getUserAccountPublicKeySync(
           this.program.programId,
           this.authority,
-          subAccountId,
+          subAccountId
         )
       : await this.getUserAccountPublicKey(subAccountId);
 
@@ -3579,21 +3550,21 @@ export class DainClient {
 
   public async updateAMMs(
     marketIndexes: number[],
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateAMMsIx(marketIndexes),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getUpdateAMMsIx(
-    marketIndexes: number[],
+    marketIndexes: number[]
   ): Promise<TransactionInstruction> {
     for (let i = marketIndexes.length; i < 5; i++) {
       marketIndexes.push(100);
@@ -3628,21 +3599,21 @@ export class DainClient {
 
   public async settleExpiredMarket(
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getSettleExpiredMarketIx(marketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getSettleExpiredMarketIx(
-    marketIndex: number,
+    marketIndex: number
   ): Promise<TransactionInstruction> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [],
@@ -3651,7 +3622,7 @@ export class DainClient {
     });
     const perpMarketPublicKey = await getPerpMarketPublicKey(
       this.program.programId,
-      marketIndex,
+      marketIndex
     );
 
     return await this.program.instruction.settleExpiredMarket(marketIndex, {
@@ -3668,30 +3639,30 @@ export class DainClient {
 
   public async settleExpiredMarketPoolsToRevenuePool(
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getSettleExpiredMarketPoolsToRevenuePoolIx(marketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getSettleExpiredMarketPoolsToRevenuePoolIx(
-    perpMarketIndex: number,
+    perpMarketIndex: number
   ): Promise<TransactionInstruction> {
     const perpMarketPublicKey = await getPerpMarketPublicKey(
       this.program.programId,
-      perpMarketIndex,
+      perpMarketIndex
     );
 
     const spotMarketPublicKey = await getSpotMarketPublicKey(
       this.program.programId,
-      QUOTE_SPOT_MARKET_INDEX,
+      QUOTE_SPOT_MARKET_INDEX
     );
 
     return await this.program.instruction.settleExpiredMarketPoolsToRevenuePool(
@@ -3704,29 +3675,29 @@ export class DainClient {
           spotMarket: spotMarketPublicKey,
           perpMarket: perpMarketPublicKey,
         },
-      },
+      }
     );
   }
 
   public async cancelOrder(
     orderId?: number,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getCancelOrderIx(orderId, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getCancelOrderIx(
     orderId?: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3748,22 +3719,22 @@ export class DainClient {
   public async cancelOrderByUserId(
     userOrderId: number,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getCancelOrderByUserIdIx(userOrderId, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getCancelOrderByUserIdIx(
     userOrderId: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3789,22 +3760,22 @@ export class DainClient {
   public async cancelOrdersByIds(
     orderIds?: number[],
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getCancelOrdersByIdsIx(orderIds, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getCancelOrdersByIdsIx(
     orderIds?: number[],
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3828,7 +3799,7 @@ export class DainClient {
     marketIndex?: number,
     direction?: PositionDirection,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -3836,12 +3807,12 @@ export class DainClient {
           marketType,
           marketIndex,
           direction,
-          subAccountId,
+          subAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -3850,7 +3821,7 @@ export class DainClient {
     marketType: MarketType | null,
     marketIndex: number | null,
     direction: PositionDirection | null,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3883,7 +3854,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -3895,14 +3866,14 @@ export class DainClient {
     },
     placeOrderParams: OrderParams[],
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const ixs = [
       await this.getCancelOrdersIx(
         cancelOrderParams.marketType,
         cancelOrderParams.marketIndex,
         cancelOrderParams.direction,
-        subAccountId,
+        subAccountId
       ),
       await this.getPlaceOrdersIx(placeOrderParams, subAccountId),
     ];
@@ -3914,14 +3885,14 @@ export class DainClient {
   public async placeOrders(
     params: OrderParams[],
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       (await this.preparePlaceOrdersTx(params, txParams, subAccountId))
         .placeOrdersTx,
       [],
       this.opts,
-      false,
+      false
     );
     return txSig;
   }
@@ -3929,11 +3900,11 @@ export class DainClient {
   public async preparePlaceOrdersTx(
     params: OrderParams[],
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ) {
     const tx = await this.buildTransaction(
       await this.getPlaceOrdersIx(params, subAccountId),
-      txParams,
+      txParams
     );
 
     return {
@@ -3943,7 +3914,7 @@ export class DainClient {
 
   public async getPlaceOrdersIx(
     params: OptionalOrderParams[],
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -3987,7 +3958,7 @@ export class DainClient {
     makerInfo?: MakerInfo | MakerInfo[],
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    fillerPublicKey?: number,
+    fillerPublicKey?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -3997,12 +3968,12 @@ export class DainClient {
           order,
           makerInfo,
           referrerInfo,
-          fillerPublicKey,
+          fillerPublicKey
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -4013,11 +3984,11 @@ export class DainClient {
     order: Pick<Order, "marketIndex" | "orderId">,
     makerInfo?: MakerInfo | MakerInfo[],
     referrerInfo?: ReferrerInfo,
-    fillerSubAccountId?: number,
+    fillerSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const filler = await this.getUserAccountPublicKey(fillerSubAccountId);
@@ -4026,14 +3997,14 @@ export class DainClient {
     const marketIndex = order
       ? order.marketIndex
       : userAccount.orders.find(
-          (order) => order.orderId === userAccount.nextOrderId - 1,
+          (order) => order.orderId === userAccount.nextOrderId - 1
         ).marketIndex;
 
     makerInfo = Array.isArray(makerInfo)
       ? makerInfo
       : makerInfo
-        ? [makerInfo]
-        : [];
+      ? [makerInfo]
+      : [];
 
     const userAccounts = [userAccount];
     for (const maker of makerInfo) {
@@ -4090,7 +4061,7 @@ export class DainClient {
   }
 
   public async getRevertFillIx(
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
     const fillerStatsPublicKey = this.getUserStatsAccountPublicKey();
@@ -4108,14 +4079,14 @@ export class DainClient {
   public async placeSpotOrder(
     orderParams: OptionalOrderParams,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       (await this.preparePlaceSpotOrderTx(orderParams, txParams, subAccountId))
         .placeSpotOrderTx,
       [],
       this.opts,
-      false,
+      false
     );
     this.spotMarketLastSlotCache.set(orderParams.marketIndex, slot);
     this.spotMarketLastSlotCache.set(QUOTE_SPOT_MARKET_INDEX, slot);
@@ -4125,11 +4096,11 @@ export class DainClient {
   public async preparePlaceSpotOrderTx(
     orderParams: OptionalOrderParams,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ) {
     const tx = await this.buildTransaction(
       await this.getPlaceSpotOrderIx(orderParams, subAccountId),
-      txParams,
+      txParams
     );
 
     return {
@@ -4139,11 +4110,12 @@ export class DainClient {
 
   public async getPlaceSpotOrderIx(
     orderParams: OptionalOrderParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.SPOT });
-    const userAccountPublicKey =
-      await this.getUserAccountPublicKey(subAccountId);
+    const userAccountPublicKey = await this.getUserAccountPublicKey(
+      subAccountId
+    );
 
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [this.getUserAccount(subAccountId)],
@@ -4175,7 +4147,7 @@ export class DainClient {
       | OpenbookV2FulfillmentConfigAccount,
     makerInfo?: MakerInfo | MakerInfo[],
     referrerInfo?: ReferrerInfo,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -4185,12 +4157,12 @@ export class DainClient {
           order,
           fulfillmentConfig,
           makerInfo,
-          referrerInfo,
+          referrerInfo
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -4205,11 +4177,11 @@ export class DainClient {
       | OpenbookV2FulfillmentConfigAccount,
     makerInfo?: MakerInfo | MakerInfo[],
     referrerInfo?: ReferrerInfo,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
@@ -4218,14 +4190,14 @@ export class DainClient {
     const marketIndex = order
       ? order.marketIndex
       : userAccount.orders.find(
-          (order) => order.orderId === userAccount.nextOrderId - 1,
+          (order) => order.orderId === userAccount.nextOrderId - 1
         ).marketIndex;
 
     makerInfo = Array.isArray(makerInfo)
       ? makerInfo
       : makerInfo
-        ? [makerInfo]
-        : [];
+      ? [makerInfo]
+      : [];
 
     const userAccounts = [userAccount];
     for (const maker of makerInfo) {
@@ -4254,7 +4226,7 @@ export class DainClient {
     this.addSpotFulfillmentAccounts(
       marketIndex,
       remainingAccounts,
-      fulfillmentConfig,
+      fulfillmentConfig
     );
 
     return await this.program.instruction.fillSpotOrder(
@@ -4271,7 +4243,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -4281,26 +4253,26 @@ export class DainClient {
     fulfillmentConfig?:
       | SerumV3FulfillmentConfigAccount
       | PhoenixV1FulfillmentConfigAccount
-      | OpenbookV2FulfillmentConfigAccount,
+      | OpenbookV2FulfillmentConfigAccount
   ): void {
     if (fulfillmentConfig) {
       if ("serumProgramId" in fulfillmentConfig) {
         this.addSerumRemainingAccounts(
           marketIndex,
           remainingAccounts,
-          fulfillmentConfig,
+          fulfillmentConfig
         );
       } else if ("phoenixProgramId" in fulfillmentConfig) {
         this.addPhoenixRemainingAccounts(
           marketIndex,
           remainingAccounts,
-          fulfillmentConfig,
+          fulfillmentConfig
         );
       } else if ("openbookV2ProgramId" in fulfillmentConfig) {
         this.addOpenbookRemainingAccounts(
           marketIndex,
           remainingAccounts,
-          fulfillmentConfig,
+          fulfillmentConfig
         );
       } else {
         throw Error("Invalid fulfillment config type");
@@ -4322,7 +4294,7 @@ export class DainClient {
   addSerumRemainingAccounts(
     marketIndex: number,
     remainingAccounts: AccountMeta[],
-    fulfillmentConfig: SerumV3FulfillmentConfigAccount,
+    fulfillmentConfig: SerumV3FulfillmentConfigAccount
   ): void {
     remainingAccounts.push({
       pubkey: fulfillmentConfig.pubkey,
@@ -4378,7 +4350,7 @@ export class DainClient {
       pubkey: getSerumSignerPublicKey(
         fulfillmentConfig.serumProgramId,
         fulfillmentConfig.serumMarket,
-        fulfillmentConfig.serumSignerNonce,
+        fulfillmentConfig.serumSignerNonce
       ),
       isWritable: false,
       isSigner: false,
@@ -4413,7 +4385,7 @@ export class DainClient {
   addPhoenixRemainingAccounts(
     marketIndex: number,
     remainingAccounts: AccountMeta[],
-    fulfillmentConfig: PhoenixV1FulfillmentConfigAccount,
+    fulfillmentConfig: PhoenixV1FulfillmentConfigAccount
   ): void {
     remainingAccounts.push({
       pubkey: fulfillmentConfig.pubkey,
@@ -4470,7 +4442,7 @@ export class DainClient {
   addOpenbookRemainingAccounts(
     marketIndex: number,
     remainingAccounts: AccountMeta[],
-    fulfillmentConfig: OpenbookV2FulfillmentConfigAccount,
+    fulfillmentConfig: OpenbookV2FulfillmentConfigAccount
   ): void {
     remainingAccounts.push({
       pubkey: fulfillmentConfig.pubkey,
@@ -4649,7 +4621,7 @@ export class DainClient {
       ixs,
       txParams,
       0,
-      lookupTables,
+      lookupTables
     )) as VersionedTransaction;
 
     const { txSig, slot } = await this.sendTransaction(tx);
@@ -4732,11 +4704,11 @@ export class DainClient {
       outAssociatedTokenAccount = await this.getAssociatedTokenAccount(
         outMarket.marketIndex,
         false,
-        tokenProgram,
+        tokenProgram
       );
 
       const accountInfo = await this.connection.getAccountInfo(
-        outAssociatedTokenAccount,
+        outAssociatedTokenAccount
       );
       if (!accountInfo) {
         preInstructions.push(
@@ -4745,8 +4717,8 @@ export class DainClient {
             this.provider.wallet.publicKey,
             this.provider.wallet.publicKey,
             outMarket.mint,
-            tokenProgram,
-          ),
+            tokenProgram
+          )
         );
       }
     }
@@ -4756,11 +4728,11 @@ export class DainClient {
       inAssociatedTokenAccount = await this.getAssociatedTokenAccount(
         inMarket.marketIndex,
         false,
-        tokenProgram,
+        tokenProgram
       );
 
       const accountInfo = await this.connection.getAccountInfo(
-        inAssociatedTokenAccount,
+        inAssociatedTokenAccount
       );
       if (!accountInfo) {
         preInstructions.push(
@@ -4769,8 +4741,8 @@ export class DainClient {
             this.provider.wallet.publicKey,
             this.provider.wallet.publicKey,
             inMarket.mint,
-            tokenProgram,
-          ),
+            tokenProgram
+          )
         );
       }
     }
@@ -4872,11 +4844,11 @@ export class DainClient {
       outAssociatedTokenAccount = await this.getAssociatedTokenAccount(
         outMarket.marketIndex,
         false,
-        tokenProgram,
+        tokenProgram
       );
 
       const accountInfo = await this.connection.getAccountInfo(
-        outAssociatedTokenAccount,
+        outAssociatedTokenAccount
       );
       if (!accountInfo) {
         preInstructions.push(
@@ -4885,8 +4857,8 @@ export class DainClient {
             this.provider.wallet.publicKey,
             this.provider.wallet.publicKey,
             outMarket.mint,
-            tokenProgram,
-          ),
+            tokenProgram
+          )
         );
       }
     }
@@ -4896,11 +4868,11 @@ export class DainClient {
       inAssociatedTokenAccount = await this.getAssociatedTokenAccount(
         inMarket.marketIndex,
         false,
-        tokenProgram,
+        tokenProgram
       );
 
       const accountInfo = await this.connection.getAccountInfo(
-        inAssociatedTokenAccount,
+        inAssociatedTokenAccount
       );
       if (!accountInfo) {
         preInstructions.push(
@@ -4909,8 +4881,8 @@ export class DainClient {
             this.provider.wallet.publicKey,
             this.provider.wallet.publicKey,
             inMarket.mint,
-            tokenProgram,
-          ),
+            tokenProgram
+          )
         );
       }
     }
@@ -5033,7 +5005,7 @@ export class DainClient {
           instructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         },
         remainingAccounts,
-      },
+      }
     );
 
     const endSwapIx = await this.program.instruction.endSwap(
@@ -5056,7 +5028,7 @@ export class DainClient {
           instructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         },
         remainingAccounts,
-      },
+      }
     );
 
     return { beginSwapIx, endSwapIx };
@@ -5084,7 +5056,7 @@ export class DainClient {
     const closeWSOLIx = createCloseAccountInstruction(
       wSOLAccount,
       this.wallet.publicKey,
-      this.wallet.publicKey,
+      this.wallet.publicKey
     );
 
     const createWSOLIx =
@@ -5092,7 +5064,7 @@ export class DainClient {
         wSOLAccount,
         this.wallet.publicKey,
         this.wallet.publicKey,
-        wSOLMint,
+        wSOLMint
       );
 
     const { beginSwapIx, endSwapIx } = await this.getSwapIx({
@@ -5127,7 +5099,7 @@ export class DainClient {
     user: UserAccount,
     order: Order,
     txParams?: TxParams,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -5135,12 +5107,12 @@ export class DainClient {
           userAccountPublicKey,
           user,
           order,
-          fillerPublicKey,
+          fillerPublicKey
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5149,7 +5121,7 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
     order: Order,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
 
@@ -5167,7 +5139,7 @@ export class DainClient {
     }
 
     const remainingAccounts = this.getRemainingAccounts(
-      remainingAccountsParams,
+      remainingAccountsParams
     );
 
     const orderId = order.orderId;
@@ -5186,19 +5158,19 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     user: UserAccount,
     txParams?: TxParams,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getForceCancelOrdersIx(
           userAccountPublicKey,
           user,
-          fillerPublicKey,
+          fillerPublicKey
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5206,7 +5178,7 @@ export class DainClient {
   public async getForceCancelOrdersIx(
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
 
@@ -5230,19 +5202,19 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     user: UserAccount,
     txParams?: TxParams,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateUserIdleIx(
           userAccountPublicKey,
           user,
-          fillerPublicKey,
+          fillerPublicKey
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5250,7 +5222,7 @@ export class DainClient {
   public async getUpdateUserIdleIx(
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
 
@@ -5271,24 +5243,24 @@ export class DainClient {
 
   public async logUserBalances(
     userAccountPublicKey: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getLogUserBalancesIx(userAccountPublicKey),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getLogUserBalancesIx(
-    userAccountPublicKey: PublicKey,
+    userAccountPublicKey: PublicKey
   ): Promise<TransactionInstruction> {
     const userAccount = (await this.program.account.user.fetch(
-      userAccountPublicKey,
+      userAccountPublicKey
     )) as UserAccount;
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [userAccount],
@@ -5308,19 +5280,19 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     user: UserAccount,
     userAuthority: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateUserFuelBonusIx(
           userAccountPublicKey,
           user,
-          userAuthority,
+          userAuthority
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5328,11 +5300,11 @@ export class DainClient {
   public async getUpdateUserFuelBonusIx(
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
-    userAuthority: PublicKey,
+    userAuthority: PublicKey
   ): Promise<TransactionInstruction> {
     const userStatsAccountPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAuthority,
+      userAuthority
     );
 
     const remainingAccounts = this.getRemainingAccounts({
@@ -5352,25 +5324,25 @@ export class DainClient {
 
   public async updateUserStatsReferrerStatus(
     userAuthority: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateUserStatsReferrerStatusIx(userAuthority),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getUpdateUserStatsReferrerStatusIx(
-    userAuthority: PublicKey,
+    userAuthority: PublicKey
   ): Promise<TransactionInstruction> {
     const userStatsAccountPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAuthority,
+      userAuthority
     );
 
     return await this.program.instruction.updateUserStatsReferrerStatus({
@@ -5386,19 +5358,19 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     user: UserAccount,
     txParams?: TxParams,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateUserOpenOrdersCountIx(
           userAccountPublicKey,
           user,
-          fillerPublicKey,
+          fillerPublicKey
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5406,7 +5378,7 @@ export class DainClient {
   public async getUpdateUserOpenOrdersCountIx(
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
-    fillerPublicKey?: PublicKey,
+    fillerPublicKey?: PublicKey
   ): Promise<TransactionInstruction> {
     const filler = fillerPublicKey ?? (await this.getUserAccountPublicKey());
 
@@ -5432,7 +5404,7 @@ export class DainClient {
     successCondition?: PlaceAndTakeOrderSuccessCondition,
     auctionDurationPercentage?: number,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -5442,12 +5414,12 @@ export class DainClient {
           referrerInfo,
           successCondition,
           auctionDurationPercentage,
-          subAccountId,
+          subAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
     return txSig;
@@ -5463,7 +5435,7 @@ export class DainClient {
     cancelExistingOrders?: boolean,
     settlePnl?: boolean,
     exitEarlyIfSimFails?: boolean,
-    auctionDurationPercentage?: number,
+    auctionDurationPercentage?: number
   ): Promise<{
     placeAndTakeTx: Transaction | VersionedTransaction;
     cancelExistingOrdersTx: Transaction | VersionedTransaction;
@@ -5492,7 +5464,7 @@ export class DainClient {
         referrerInfo,
         undefined,
         auctionDurationPercentage,
-        subAccountId,
+        subAccountId
       );
 
       placeAndTakeIxs.push(placeAndTakeIx);
@@ -5500,7 +5472,7 @@ export class DainClient {
       if (bracketOrdersParams.length > 0) {
         const bracketOrdersIx = await this.getPlaceOrdersIx(
           bracketOrdersParams,
-          subAccountId,
+          subAccountId
         );
         placeAndTakeIxs.push(bracketOrdersIx);
       }
@@ -5521,7 +5493,7 @@ export class DainClient {
           undefined,
           undefined,
           true,
-          recentBlockHash,
+          recentBlockHash
         )) as VersionedTransaction;
 
         const simulationResult =
@@ -5529,7 +5501,7 @@ export class DainClient {
             placeAndTakeTxToSim,
             this.connection,
             txParams.computeUnitsBufferMultiplier ?? 1.2,
-            txParams.lowerBoundCu,
+            txParams.lowerBoundCu
           );
 
         if (shouldExitIfSimulationFails && !simulationResult.success) {
@@ -5546,7 +5518,7 @@ export class DainClient {
           undefined,
           undefined,
           undefined,
-          recentBlockHash,
+          recentBlockHash
         );
       } else {
         txsToSign.placeAndTakeTx = await this.buildTransaction(
@@ -5555,7 +5527,7 @@ export class DainClient {
           undefined,
           undefined,
           undefined,
-          recentBlockHash,
+          recentBlockHash
         );
       }
 
@@ -5568,7 +5540,7 @@ export class DainClient {
           orderParams.marketType,
           orderParams.marketIndex,
           null,
-          subAccountId,
+          subAccountId
         );
 
         txsToSign.cancelExistingOrdersTx = await this.buildTransaction(
@@ -5577,7 +5549,7 @@ export class DainClient {
           this.txVersion,
           undefined,
           undefined,
-          recentBlockHash,
+          recentBlockHash
         );
       }
 
@@ -5586,13 +5558,14 @@ export class DainClient {
 
     const prepSettlePnlTx = async () => {
       if (settlePnl && isVariant(orderParams.marketType, "perp")) {
-        const userAccountPublicKey =
-          await this.getUserAccountPublicKey(subAccountId);
+        const userAccountPublicKey = await this.getUserAccountPublicKey(
+          subAccountId
+        );
 
         const settlePnlIx = await this.settlePNLIx(
           userAccountPublicKey,
           this.getUserAccount(subAccountId),
-          orderParams.marketIndex,
+          orderParams.marketIndex
         );
 
         txsToSign.settlePnlTx = await this.buildTransaction(
@@ -5601,7 +5574,7 @@ export class DainClient {
           this.txVersion,
           undefined,
           undefined,
-          recentBlockHash,
+          recentBlockHash
         );
       }
       return;
@@ -5629,7 +5602,7 @@ export class DainClient {
     subAccountId?: number,
     cancelExistingOrders?: boolean,
     settlePnl?: boolean,
-    exitEarlyIfSimFails?: boolean,
+    exitEarlyIfSimFails?: boolean
   ): Promise<{
     txSig: TransactionSignature;
     signedCancelExistingOrdersTx?: Transaction;
@@ -5645,7 +5618,7 @@ export class DainClient {
         subAccountId,
         cancelExistingOrders,
         settlePnl,
-        exitEarlyIfSimFails,
+        exitEarlyIfSimFails
       );
 
     if (!txsToSign) {
@@ -5656,7 +5629,7 @@ export class DainClient {
       await this.txHandler.getSignedTransactionMap(
         txsToSign,
         // @ts-ignore
-        this.provider.wallet,
+        this.provider.wallet
       )
     ).signedTxMap;
 
@@ -5664,7 +5637,7 @@ export class DainClient {
       signedTxs.placeAndTakeTx,
       [],
       this.opts,
-      true,
+      true
     );
 
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
@@ -5683,7 +5656,7 @@ export class DainClient {
     referrerInfo?: ReferrerInfo,
     successCondition?: PlaceAndTakeOrderSuccessCondition,
     auctionDurationPercentage?: number,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.PERP });
     const userStatsPublicKey = await this.getUserStatsAccountPublicKey();
@@ -5692,8 +5665,8 @@ export class DainClient {
     makerInfo = Array.isArray(makerInfo)
       ? makerInfo
       : makerInfo
-        ? [makerInfo]
-        : [];
+      ? [makerInfo]
+      : [];
 
     const userAccounts = [this.getUserAccount(subAccountId)];
     for (const maker of makerInfo) {
@@ -5754,7 +5727,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -5763,7 +5736,7 @@ export class DainClient {
     takerInfo: TakerInfo,
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -5771,12 +5744,12 @@ export class DainClient {
           orderParams,
           takerInfo,
           referrerInfo,
-          subAccountId,
+          subAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
 
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
@@ -5788,7 +5761,7 @@ export class DainClient {
     orderParams: OptionalOrderParams,
     takerInfo: TakerInfo,
     referrerInfo?: ReferrerInfo,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.PERP });
     const userStatsPublicKey = this.getUserStatsAccountPublicKey();
@@ -5830,7 +5803,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -5841,7 +5814,7 @@ export class DainClient {
   public decodeSwiftServerMessage(encodedMessage: Buffer): SwiftServerMessage {
     const decodedSwiftMessage = this.program.coder.types.decode(
       "SwiftServerMessage",
-      encodedMessage,
+      encodedMessage
     );
     return {
       uuid: decodedSwiftMessage.uuid,
@@ -5852,42 +5825,42 @@ export class DainClient {
 
   public signSwiftServerMessage(message: SwiftServerMessage): Buffer {
     const swiftServerMessage = Uint8Array.from(
-      digest(this.encodeSwiftServerMessage(message)),
+      digest(this.encodeSwiftServerMessage(message))
     );
     return this.signMessage(swiftServerMessage);
   }
 
   public signSwiftOrderParamsMessage(
-    orderParamsMessage: SwiftOrderParamsMessage,
+    orderParamsMessage: SwiftOrderParamsMessage
   ): Buffer {
     const takerOrderParamsMessage =
       this.encodeSwiftOrderParamsMessage(orderParamsMessage);
     return this.signMessage(
-      new TextEncoder().encode(digest(takerOrderParamsMessage).toString("hex")),
+      new TextEncoder().encode(digest(takerOrderParamsMessage).toString("hex"))
     );
   }
 
   public encodeSwiftOrderParamsMessage(
-    orderParamsMessage: SwiftOrderParamsMessage,
+    orderParamsMessage: SwiftOrderParamsMessage
   ): Buffer {
     return this.program.coder.types.encode(
       "SwiftOrderParamsMessage",
-      orderParamsMessage,
+      orderParamsMessage
     );
   }
 
   public decodeSwiftOrderParamsMessage(
-    encodedMessage: Buffer,
+    encodedMessage: Buffer
   ): SwiftOrderParamsMessage {
     return this.program.coder.types.decode(
       "SwiftOrderParamsMessage",
-      encodedMessage,
+      encodedMessage
     );
   }
 
   public signMessage(
     message: Uint8Array,
-    keypair: Keypair = this.wallet.payer,
+    keypair: Keypair = this.wallet.payer
   ): Buffer {
     return Buffer.from(nacl.sign.detached(message, keypair.secretKey));
   }
@@ -5903,7 +5876,7 @@ export class DainClient {
       takerStats: PublicKey;
       takerUserAccount: UserAccount;
     },
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const ixs = await this.getPlaceSwiftTakerPerpOrderIxs(
       swiftServerMessage,
@@ -5911,12 +5884,12 @@ export class DainClient {
       swiftOrderParamsMessage,
       swiftOrderParamsSignature,
       marketIndex,
-      takerInfo,
+      takerInfo
     );
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(ixs, txParams),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -5931,7 +5904,7 @@ export class DainClient {
       taker: PublicKey;
       takerStats: PublicKey;
       takerUserAccount: UserAccount;
-    },
+    }
   ): Promise<TransactionInstruction[]> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [takerInfo.takerUserAccount],
@@ -5951,7 +5924,7 @@ export class DainClient {
         publicKey: takerInfo.takerUserAccount.authority.toBytes(),
         signature: Uint8Array.from(swiftOrderParamsSignature),
         message: new TextEncoder().encode(
-          digest(encodedSwiftOrderParamsMessage).toString("hex"),
+          digest(encodedSwiftOrderParamsMessage).toString("hex")
         ),
       });
 
@@ -5966,13 +5939,13 @@ export class DainClient {
             userStats: takerInfo.takerStats,
             swiftUserOrders: getSwiftUserAccountPublicKey(
               this.program.programId,
-              takerInfo.taker,
+              takerInfo.taker
             ),
             authority: this.wallet.publicKey,
             ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
           },
           remainingAccounts,
-        },
+        }
       );
 
     return [
@@ -5996,7 +5969,7 @@ export class DainClient {
     orderParams: OptionalOrderParams,
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const ixs = await this.getPlaceAndMakeSwiftPerpOrderIxs(
       encodedSwiftMessage,
@@ -6007,12 +5980,12 @@ export class DainClient {
       takerInfo,
       orderParams,
       referrerInfo,
-      subAccountId,
+      subAccountId
     );
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(ixs, txParams),
       [],
-      this.opts,
+      this.opts
     );
 
     this.perpMarketLastSlotCache.set(orderParams.marketIndex, slot);
@@ -6032,7 +6005,7 @@ export class DainClient {
     },
     orderParams: OptionalOrderParams,
     referrerInfo?: ReferrerInfo,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction[]> {
     const [
       swiftServerSignatureIx,
@@ -6044,7 +6017,7 @@ export class DainClient {
       encodedSwiftOrderParamsMessage,
       swiftOrderParamsSignature,
       orderParams.marketIndex,
-      takerInfo,
+      takerInfo
     );
 
     orderParams = getOrderParams(orderParams, { marketType: MarketType.PERP });
@@ -6087,11 +6060,11 @@ export class DainClient {
             authority: this.wallet.publicKey,
             takerSwiftUserOrders: getSwiftUserAccountPublicKey(
               this.program.programId,
-              takerInfo.taker,
+              takerInfo.taker
             ),
           },
           remainingAccounts,
-        },
+        }
       );
 
     return [
@@ -6108,19 +6081,19 @@ export class DainClient {
 
   public async placeAndMatchRFQOrders(
     rfqMatches: RFQMatch[],
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const ixs = await this.getPlaceAndMatchRFQOrdersIxs(rfqMatches);
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(ixs, txParams),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getPlaceAndMatchRFQOrdersIxs(
-    rfqMatches: RFQMatch[],
+    rfqMatches: RFQMatch[]
   ): Promise<TransactionInstruction[]> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [this.getUserAccount()],
@@ -6135,7 +6108,7 @@ export class DainClient {
         publicKey: match.makerOrderParams.authority.toBytes(),
         signature: match.makerSignature,
         message: Uint8Array.from(
-          this.encodeRFQMakerOrderParams(match.makerOrderParams),
+          this.encodeRFQMakerOrderParams(match.makerOrderParams)
         ),
       });
       verifyIxs.push(verifyIx);
@@ -6143,7 +6116,7 @@ export class DainClient {
       const userAccountPubkey = await getUserAccountPublicKey(
         this.program.programId,
         match.makerOrderParams.authority,
-        match.makerOrderParams.subAccountId,
+        match.makerOrderParams.subAccountId
       );
       makerAccountMetas.push({
         pubkey: userAccountPubkey,
@@ -6154,7 +6127,7 @@ export class DainClient {
       makerAccountMetas.push({
         pubkey: getUserStatsAccountPublicKey(
           this.program.programId,
-          match.makerOrderParams.authority,
+          match.makerOrderParams.authority
         ),
         isWritable: true,
         isSigner: false,
@@ -6163,7 +6136,7 @@ export class DainClient {
       makerAccountMetas.push({
         pubkey: getRFQUserAccountPublicKey(
           this.program.programId,
-          userAccountPubkey,
+          userAccountPubkey
         ),
         isWritable: true,
         isSigner: false,
@@ -6193,7 +6166,7 @@ export class DainClient {
     makerInfo?: MakerInfo,
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ) {
     const tx = await this.buildTransaction(
       await this.getPlaceAndTakeSpotOrderIx(
@@ -6201,9 +6174,9 @@ export class DainClient {
         fulfillmentConfig,
         makerInfo,
         referrerInfo,
-        subAccountId,
+        subAccountId
       ),
-      txParams,
+      txParams
     );
 
     return {
@@ -6217,7 +6190,7 @@ export class DainClient {
     makerInfo?: MakerInfo,
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       (
@@ -6227,12 +6200,12 @@ export class DainClient {
           makerInfo,
           referrerInfo,
           txParams,
-          subAccountId,
+          subAccountId
         )
       ).placeAndTakeSpotOrderTx,
       [],
       this.opts,
-      false,
+      false
     );
     this.spotMarketLastSlotCache.set(orderParams.marketIndex, slot);
     this.spotMarketLastSlotCache.set(QUOTE_SPOT_MARKET_INDEX, slot);
@@ -6244,7 +6217,7 @@ export class DainClient {
     fulfillmentConfig?: SerumV3FulfillmentConfigAccount,
     makerInfo?: MakerInfo,
     referrerInfo?: ReferrerInfo,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.SPOT });
     const userStatsPublicKey = this.getUserStatsAccountPublicKey();
@@ -6294,7 +6267,7 @@ export class DainClient {
     this.addSpotFulfillmentAccounts(
       orderParams.marketIndex,
       remainingAccounts,
-      fulfillmentConfig,
+      fulfillmentConfig
     );
 
     return await this.program.instruction.placeAndTakeSpotOrder(
@@ -6309,7 +6282,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -6319,7 +6292,7 @@ export class DainClient {
     fulfillmentConfig?: SerumV3FulfillmentConfigAccount,
     referrerInfo?: ReferrerInfo,
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -6328,12 +6301,12 @@ export class DainClient {
           takerInfo,
           fulfillmentConfig,
           referrerInfo,
-          subAccountId,
+          subAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.spotMarketLastSlotCache.set(orderParams.marketIndex, slot);
     this.spotMarketLastSlotCache.set(QUOTE_SPOT_MARKET_INDEX, slot);
@@ -6345,7 +6318,7 @@ export class DainClient {
     takerInfo: TakerInfo,
     fulfillmentConfig?: SerumV3FulfillmentConfigAccount,
     referrerInfo?: ReferrerInfo,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     orderParams = getOrderParams(orderParams, { marketType: MarketType.SPOT });
     const userStatsPublicKey = this.getUserStatsAccountPublicKey();
@@ -6379,7 +6352,7 @@ export class DainClient {
     this.addSpotFulfillmentAccounts(
       orderParams.marketIndex,
       remainingAccounts,
-      fulfillmentConfig,
+      fulfillmentConfig
     );
 
     const takerOrderId = takerInfo.order.orderId;
@@ -6397,7 +6370,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -6407,7 +6380,7 @@ export class DainClient {
   public async closePosition(
     marketIndex: number,
     limitPrice?: BN,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const userPosition =
       this.getUser(subAccountId).getPerpPosition(marketIndex);
@@ -6429,7 +6402,7 @@ export class DainClient {
       undefined,
       undefined,
       undefined,
-      subAccountId,
+      subAccountId
     );
   }
 
@@ -6446,7 +6419,7 @@ export class DainClient {
     orderId: number,
     newBaseAmount?: BN,
     newLimitPrice?: BN,
-    newOraclePriceOffset?: number,
+    newOraclePriceOffset?: number
   ): Promise<TransactionSignature> {
     return this.modifyOrder({
       orderId,
@@ -6469,7 +6442,7 @@ export class DainClient {
     userOrderId: number,
     newBaseAmount?: BN,
     newLimitPrice?: BN,
-    newOraclePriceOffset?: number,
+    newOraclePriceOffset?: number
   ): Promise<TransactionSignature> {
     return this.modifyOrderByUserOrderId({
       userOrderId,
@@ -6516,15 +6489,15 @@ export class DainClient {
       policy?: number;
     },
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getModifyOrderIx(orderParams, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -6563,7 +6536,7 @@ export class DainClient {
       maxTs?: BN;
       policy?: number;
     },
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -6638,15 +6611,15 @@ export class DainClient {
       maxTs?: BN;
     },
     txParams?: TxParams,
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getModifyOrderByUserIdIx(orderParams, subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -6686,7 +6659,7 @@ export class DainClient {
       maxTs?: BN;
       txParams?: TxParams;
     },
-    subAccountId?: number,
+    subAccountId?: number
   ): Promise<TransactionInstruction> {
     const user = await this.getUserAccountPublicKey(subAccountId);
 
@@ -6723,7 +6696,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
         },
         remainingAccounts,
-      },
+      }
     );
   }
 
@@ -6736,7 +6709,7 @@ export class DainClient {
     opts?: {
       filterInvalidMarkets?: boolean;
     },
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const filterInvalidMarkets = opts?.filterInvalidMarkets;
 
@@ -6757,7 +6730,7 @@ export class DainClient {
           perpMarketAccount,
           oraclePriceData,
           oracleGuardRails,
-          stateAccountAndSlot.slot,
+          stateAccountAndSlot.slot
         );
 
         if (isValid) {
@@ -6773,7 +6746,7 @@ export class DainClient {
       ixs,
       txParams ?? {
         computeUnits: 1_400_000,
-      },
+      }
     );
 
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -6785,7 +6758,7 @@ export class DainClient {
       settleeUserAccountPublicKey: PublicKey;
       settleeUserAccount: UserAccount;
     }[],
-    marketIndexes: number[],
+    marketIndexes: number[]
   ): Promise<Array<TransactionInstruction>> {
     const ixs = [];
     for (const { settleeUserAccountPublicKey, settleeUserAccount } of users) {
@@ -6794,8 +6767,8 @@ export class DainClient {
           await this.settlePNLIx(
             settleeUserAccountPublicKey,
             settleeUserAccount,
-            marketIndex,
-          ),
+            marketIndex
+          )
         );
       }
     }
@@ -6807,19 +6780,19 @@ export class DainClient {
     settleeUserAccountPublicKey: PublicKey,
     settleeUserAccount: UserAccount,
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.settlePNLIx(
           settleeUserAccountPublicKey,
           settleeUserAccount,
-          marketIndex,
+          marketIndex
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -6827,7 +6800,7 @@ export class DainClient {
   public async settlePNLIx(
     settleeUserAccountPublicKey: PublicKey,
     settleeUserAccount: UserAccount,
-    marketIndex: number,
+    marketIndex: number
   ): Promise<TransactionInstruction> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [settleeUserAccount],
@@ -6851,7 +6824,7 @@ export class DainClient {
     settleeUserAccount: UserAccount,
     marketIndexes: number[],
     mode: SettlePnlMode,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -6859,12 +6832,12 @@ export class DainClient {
           settleeUserAccountPublicKey,
           settleeUserAccount,
           marketIndexes,
-          mode,
+          mode
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -6874,7 +6847,7 @@ export class DainClient {
     settleeUserAccount: UserAccount,
     marketIndexes: number[],
     mode: SettlePnlMode,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature[]> {
     // need multiple TXs because settling more than 4 markets won't fit in a single TX
     const txsToSign: (Transaction | VersionedTransaction)[] = [];
@@ -6888,7 +6861,7 @@ export class DainClient {
         settleeUserAccountPublicKey,
         settleeUserAccount,
         marketIndexes,
-        mode,
+        mode
       );
       const computeUnits = Math.min(300_000 * marketIndexes.length, 1_400_000);
       const tx = await this.buildTransaction(ix, {
@@ -6922,7 +6895,7 @@ export class DainClient {
     settleeUserAccountPublicKey: PublicKey,
     settleeUserAccount: UserAccount,
     marketIndexes: number[],
-    mode: SettlePnlMode,
+    mode: SettlePnlMode
   ): Promise<TransactionInstruction> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [settleeUserAccount],
@@ -6941,13 +6914,13 @@ export class DainClient {
           spotMarketVault: this.getQuoteSpotMarketAccount().vault,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
   public async getSetUserStatusToBeingLiquidatedIx(
     userAccountPublicKey: PublicKey,
-    userAccount: UserAccount,
+    userAccount: UserAccount
   ): Promise<TransactionInstruction> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [userAccount],
@@ -6964,17 +6937,17 @@ export class DainClient {
 
   public async setUserStatusToBeingLiquidated(
     userAccountPublicKey: PublicKey,
-    userAccount: UserAccount,
+    userAccount: UserAccount
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getSetUserStatusToBeingLiquidatedIx(
           userAccountPublicKey,
-          userAccount,
-        ),
+          userAccount
+        )
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -6986,7 +6959,7 @@ export class DainClient {
     maxBaseAssetAmount: BN,
     limitPrice?: BN,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -6996,12 +6969,12 @@ export class DainClient {
           marketIndex,
           maxBaseAssetAmount,
           limitPrice,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(marketIndex, slot);
     return txSig;
@@ -7013,15 +6986,15 @@ export class DainClient {
     marketIndex: number,
     maxBaseAssetAmount: BN,
     limitPrice?: BN,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7045,7 +7018,7 @@ export class DainClient {
           liquidatorStats: liquidatorStatsPublicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -7055,7 +7028,7 @@ export class DainClient {
     marketIndex: number,
     makerInfos: MakerInfo[],
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7064,12 +7037,12 @@ export class DainClient {
           userAccount,
           marketIndex,
           makerInfos,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(marketIndex, slot);
     return txSig;
@@ -7080,15 +7053,15 @@ export class DainClient {
     userAccount: UserAccount,
     marketIndex: number,
     makerInfos: MakerInfo[],
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7135,7 +7108,7 @@ export class DainClient {
     maxLiabilityTransfer: BN,
     limitPrice?: BN,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7146,12 +7119,12 @@ export class DainClient {
           liabilityMarketIndex,
           maxLiabilityTransfer,
           limitPrice,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.spotMarketLastSlotCache.set(assetMarketIndex, slot);
     this.spotMarketLastSlotCache.set(liabilityMarketIndex, slot);
@@ -7165,15 +7138,15 @@ export class DainClient {
     liabilityMarketIndex: number,
     maxLiabilityTransfer: BN,
     limitPrice?: BN,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7198,7 +7171,7 @@ export class DainClient {
           liquidatorStats: liquidatorStatsPublicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -7210,7 +7183,7 @@ export class DainClient {
     maxLiabilityTransfer: BN,
     limitPrice?: BN,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7221,12 +7194,12 @@ export class DainClient {
           liabilityMarketIndex,
           maxLiabilityTransfer,
           limitPrice,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(perpMarketIndex, slot);
     this.spotMarketLastSlotCache.set(liabilityMarketIndex, slot);
@@ -7240,15 +7213,15 @@ export class DainClient {
     liabilityMarketIndex: number,
     maxLiabilityTransfer: BN,
     limitPrice?: BN,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7273,7 +7246,7 @@ export class DainClient {
           liquidatorStats: liquidatorStatsPublicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -7285,7 +7258,7 @@ export class DainClient {
     maxPnlTransfer: BN,
     limitPrice?: BN,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig, slot } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7296,12 +7269,12 @@ export class DainClient {
           assetMarketIndex,
           maxPnlTransfer,
           limitPrice,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     this.perpMarketLastSlotCache.set(perpMarketIndex, slot);
     this.spotMarketLastSlotCache.set(assetMarketIndex, slot);
@@ -7315,15 +7288,15 @@ export class DainClient {
     assetMarketIndex: number,
     maxPnlTransfer: BN,
     limitPrice?: BN,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7348,7 +7321,7 @@ export class DainClient {
           liquidatorStats: liquidatorStatsPublicKey,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -7357,7 +7330,7 @@ export class DainClient {
     userAccount: UserAccount,
     marketIndex: number,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7365,12 +7338,12 @@ export class DainClient {
           userAccountPublicKey,
           userAccount,
           marketIndex,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -7379,15 +7352,15 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
     marketIndex: number,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7416,7 +7389,7 @@ export class DainClient {
           tokenProgram: TOKEN_PROGRAM_ID,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
@@ -7425,7 +7398,7 @@ export class DainClient {
     userAccount: UserAccount,
     marketIndex: number,
     txParams?: TxParams,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
@@ -7433,12 +7406,12 @@ export class DainClient {
           userAccountPublicKey,
           userAccount,
           marketIndex,
-          liquidatorSubAccountId,
+          liquidatorSubAccountId
         ),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -7447,15 +7420,15 @@ export class DainClient {
     userAccountPublicKey: PublicKey,
     userAccount: UserAccount,
     marketIndex: number,
-    liquidatorSubAccountId?: number,
+    liquidatorSubAccountId?: number
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      userAccount.authority,
+      userAccount.authority
     );
 
     const liquidator = await this.getUserAccountPublicKey(
-      liquidatorSubAccountId,
+      liquidatorSubAccountId
     );
     const liquidatorStatsPublicKey = this.getUserStatsAccountPublicKey();
 
@@ -7489,26 +7462,26 @@ export class DainClient {
   public async updateFundingRate(
     perpMarketIndex: number,
     oracle: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdateFundingRateIx(perpMarketIndex, oracle),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getUpdateFundingRateIx(
     perpMarketIndex: number,
-    oracle: PublicKey,
+    oracle: PublicKey
   ): Promise<TransactionInstruction> {
     const perpMarketPublicKey = await getPerpMarketPublicKey(
       this.program.programId,
-      perpMarketIndex,
+      perpMarketIndex
     );
     return await this.program.instruction.updateFundingRate(perpMarketIndex, {
       accounts: {
@@ -7521,21 +7494,21 @@ export class DainClient {
 
   public async updatePrelaunchOracle(
     perpMarketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdatePrelaunchOracleIx(perpMarketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getUpdatePrelaunchOracleIx(
-    perpMarketIndex: number,
+    perpMarketIndex: number
   ): Promise<TransactionInstruction> {
     const perpMarket = this.getPerpMarketAccount(perpMarketIndex);
 
@@ -7555,22 +7528,22 @@ export class DainClient {
   public async updatePerpBidAskTwap(
     perpMarketIndex: number,
     makers: [PublicKey, PublicKey][],
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getUpdatePerpBidAskTwapIx(perpMarketIndex, makers),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getUpdatePerpBidAskTwapIx(
     perpMarketIndex: number,
-    makers: [PublicKey, PublicKey][],
+    makers: [PublicKey, PublicKey][]
   ): Promise<TransactionInstruction> {
     const perpMarket = this.getPerpMarketAccount(perpMarketIndex);
 
@@ -7602,24 +7575,24 @@ export class DainClient {
 
   public async settleFundingPayment(
     userAccountPublicKey: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getSettleFundingPaymentIx(userAccountPublicKey),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getSettleFundingPaymentIx(
-    userAccountPublicKey: PublicKey,
+    userAccountPublicKey: PublicKey
   ): Promise<TransactionInstruction> {
     const userAccount = (await this.program.account.user.fetch(
-      userAccountPublicKey,
+      userAccountPublicKey
     )) as UserAccount;
 
     const writablePerpMarketIndexes = [];
@@ -7649,38 +7622,38 @@ export class DainClient {
 
   public getOracleDataForPerpMarket(marketIndex: number): OraclePriceData {
     return this.accountSubscriber.getOraclePriceDataAndSlotForPerpMarket(
-      marketIndex,
+      marketIndex
     ).data;
   }
 
   public getOracleDataForSpotMarket(marketIndex: number): OraclePriceData {
     return this.accountSubscriber.getOraclePriceDataAndSlotForSpotMarket(
-      marketIndex,
+      marketIndex
     ).data;
   }
 
   public async initializeInsuranceFundStake(
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getInitializeInsuranceFundStakeIx(marketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getInitializeInsuranceFundStakeIx(
-    marketIndex: number,
+    marketIndex: number
   ): Promise<TransactionInstruction> {
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      marketIndex,
+      marketIndex
     );
 
     return await this.program.instruction.initializeInsuranceFundStake(
@@ -7696,20 +7669,20 @@ export class DainClient {
           systemProgram: anchor.web3.SystemProgram.programId,
           state: await this.getStatePublicKey(),
         },
-      },
+      }
     );
   }
 
   public async getAddInsuranceFundStakeIx(
     marketIndex: number,
     amount: BN,
-    collateralAccountPublicKey: PublicKey,
+    collateralAccountPublicKey: PublicKey
   ): Promise<TransactionInstruction> {
     const spotMarket = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      marketIndex,
+      marketIndex
     );
 
     const remainingAccounts = [];
@@ -7732,7 +7705,7 @@ export class DainClient {
           tokenProgram,
         },
         remainingAccounts,
-      },
+      }
     );
 
     return ix;
@@ -7782,7 +7755,7 @@ export class DainClient {
       spotMarketAccount.mint,
       this.wallet.publicKey,
       true,
-      tokenProgramId,
+      tokenProgramId
     );
 
     addIfStakeIxs.push(
@@ -7791,8 +7764,8 @@ export class DainClient {
         associatedTokenAccountPublicKey,
         this.wallet.publicKey,
         spotMarketAccount.mint,
-        tokenProgramId,
-      ),
+        tokenProgramId
+      )
     );
 
     let tokenAccount;
@@ -7806,7 +7779,7 @@ export class DainClient {
     if (createWSOLTokenAccount) {
       const { ixs, pubkey } = await this.getWrappedSolAccountCreationIxs(
         amount,
-        true,
+        true
       );
       tokenAccount = pubkey;
       ixs.forEach((ix) => {
@@ -7820,21 +7793,22 @@ export class DainClient {
       const withdrawIx = await this.getWithdrawIx(
         amount,
         marketIndex,
-        tokenAccount,
+        tokenAccount
       );
       addIfStakeIxs.push(withdrawIx);
     }
 
     if (initializeStakeAccount) {
-      const initializeIx =
-        await this.getInitializeInsuranceFundStakeIx(marketIndex);
+      const initializeIx = await this.getInitializeInsuranceFundStakeIx(
+        marketIndex
+      );
       addIfStakeIxs.push(initializeIx);
     }
 
     const addFundsIx = await this.getAddInsuranceFundStakeIx(
       marketIndex,
       amount,
-      tokenAccount,
+      tokenAccount
     );
 
     addIfStakeIxs.push(addFundsIx);
@@ -7845,8 +7819,8 @@ export class DainClient {
           tokenAccount,
           this.wallet.publicKey,
           this.wallet.publicKey,
-          [],
-        ),
+          []
+        )
       );
     }
 
@@ -7855,7 +7829,7 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       tx,
       additionalSigners,
-      this.opts,
+      this.opts
     );
 
     return txSig;
@@ -7864,13 +7838,13 @@ export class DainClient {
   public async requestRemoveInsuranceFundStake(
     marketIndex: number,
     amount: BN,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      marketIndex,
+      marketIndex
     );
 
     const ix = await this.program.instruction.requestRemoveInsuranceFundStake(
@@ -7885,7 +7859,7 @@ export class DainClient {
           authority: this.wallet.publicKey,
           insuranceFundVault: spotMarketAccount.insuranceFund.vault,
         },
-      },
+      }
     );
 
     const tx = await this.buildTransaction(ix, txParams);
@@ -7896,13 +7870,13 @@ export class DainClient {
 
   public async cancelRequestRemoveInsuranceFundStake(
     marketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      marketIndex,
+      marketIndex
     );
 
     const ix =
@@ -7917,7 +7891,7 @@ export class DainClient {
             authority: this.wallet.publicKey,
             insuranceFundVault: spotMarketAccount.insuranceFund.vault,
           },
-        },
+        }
       );
 
     const tx = await this.buildTransaction(ix, txParams);
@@ -7929,14 +7903,14 @@ export class DainClient {
   public async removeInsuranceFundStake(
     marketIndex: number,
     collateralAccountPublicKey: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const removeIfStakeIxs = [];
     const spotMarketAccount = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       this.wallet.publicKey,
-      marketIndex,
+      marketIndex
     );
 
     const additionalSigners: Array<Signer> = [];
@@ -7950,7 +7924,7 @@ export class DainClient {
     if (createWSOLTokenAccount) {
       const { ixs, pubkey } = await this.getWrappedSolAccountCreationIxs(
         ZERO,
-        true,
+        true
       );
       tokenAccount = pubkey;
       ixs.forEach((ix) => {
@@ -7966,7 +7940,7 @@ export class DainClient {
             this.wallet.publicKey,
             this.wallet.publicKey,
             spotMarketAccount.mint,
-            tokenProgramId,
+            tokenProgramId
           );
         removeIfStakeIxs.push(createTokenAccountIx);
       }
@@ -8000,8 +7974,8 @@ export class DainClient {
           tokenAccount,
           this.wallet.publicKey,
           this.wallet.publicKey,
-          [],
-        ),
+          []
+        )
       );
     }
 
@@ -8010,36 +7984,36 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       tx,
       additionalSigners,
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async updateUserQuoteAssetInsuranceStake(
     authority: PublicKey,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const tx = await this.buildTransaction(
       await this.getUpdateUserQuoteAssetInsuranceStakeIx(authority),
-      txParams,
+      txParams
     );
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
     return txSig;
   }
 
   public async getUpdateUserQuoteAssetInsuranceStakeIx(
-    authority: PublicKey,
+    authority: PublicKey
   ): Promise<TransactionInstruction> {
     const marketIndex = QUOTE_SPOT_MARKET_INDEX;
     const spotMarket = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       authority,
-      marketIndex,
+      marketIndex
     );
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      authority,
+      authority
     );
 
     const ix = this.program.instruction.updateUserQuoteAssetInsuranceStake({
@@ -8059,7 +8033,7 @@ export class DainClient {
   public async updateUserGovTokenInsuranceStake(
     authority: PublicKey,
     txParams?: TxParams,
-    env: NetworkEnv = "mainnet-beta",
+    env: NetworkEnv = "mainnet-beta"
   ): Promise<TransactionSignature> {
     const ix =
       env == "mainnet-beta"
@@ -8071,18 +8045,18 @@ export class DainClient {
   }
 
   public async getUpdateUserGovTokenInsuranceStakeIx(
-    authority: PublicKey,
+    authority: PublicKey
   ): Promise<TransactionInstruction> {
     const marketIndex = GOV_SPOT_MARKET_INDEX;
     const spotMarket = this.getSpotMarketAccount(marketIndex);
     const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
       this.program.programId,
       authority,
-      marketIndex,
+      marketIndex
     );
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      authority,
+      authority
     );
 
     const ix = this.program.instruction.updateUserGovTokenInsuranceStake({
@@ -8101,11 +8075,11 @@ export class DainClient {
 
   public async getUpdateUserGovTokenInsuranceStakeDevnetIx(
     authority: PublicKey,
-    amount: BN = new BN(1),
+    amount: BN = new BN(1)
   ): Promise<TransactionInstruction> {
     const userStatsPublicKey = getUserStatsAccountPublicKey(
       this.program.programId,
-      authority,
+      authority
     );
 
     const ix = this.program.instruction.updateUserGovTokenInsuranceStakeDevnet(
@@ -8115,7 +8089,7 @@ export class DainClient {
           userStats: userStatsPublicKey,
           signer: this.wallet.publicKey,
         },
-      },
+      }
     );
 
     return ix;
@@ -8123,18 +8097,18 @@ export class DainClient {
 
   public async settleRevenueToInsuranceFund(
     spotMarketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const tx = await this.buildTransaction(
       await this.getSettleRevenueToInsuranceFundIx(spotMarketIndex),
-      txParams,
+      txParams
     );
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
     return txSig;
   }
 
   public async getSettleRevenueToInsuranceFundIx(
-    spotMarketIndex: number,
+    spotMarketIndex: number
   ): Promise<TransactionInstruction> {
     const spotMarketAccount = this.getSpotMarketAccount(spotMarketIndex);
     const tokenProgramId = this.getTokenProgramForSpotMarket(spotMarketAccount);
@@ -8153,7 +8127,7 @@ export class DainClient {
           tokenProgram: tokenProgramId,
         },
         remainingAccounts,
-      },
+      }
     );
     return ix;
   }
@@ -8161,22 +8135,22 @@ export class DainClient {
   public async resolvePerpPnlDeficit(
     spotMarketIndex: number,
     perpMarketIndex: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getResolvePerpPnlDeficitIx(spotMarketIndex, perpMarketIndex),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getResolvePerpPnlDeficitIx(
     spotMarketIndex: number,
-    perpMarketIndex: number,
+    perpMarketIndex: number
   ): Promise<TransactionInstruction> {
     const remainingAccounts = this.getRemainingAccounts({
       userAccounts: [this.getUserAccount()],
@@ -8201,14 +8175,14 @@ export class DainClient {
           tokenProgram: tokenProgramId,
         },
         remainingAccounts: remainingAccounts,
-      },
+      }
     );
   }
 
   public async getDepositIntoSpotMarketRevenuePoolIx(
     marketIndex: number,
     amount: BN,
-    userTokenAccountPublicKey: PublicKey,
+    userTokenAccountPublicKey: PublicKey
   ): Promise<TransactionInstruction> {
     const spotMarket = await this.getSpotMarketAccount(marketIndex);
 
@@ -8226,7 +8200,7 @@ export class DainClient {
           userTokenAccount: userTokenAccountPublicKey,
           tokenProgram,
         },
-      },
+      }
     );
 
     return ix;
@@ -8242,12 +8216,12 @@ export class DainClient {
   public async depositIntoSpotMarketRevenuePool(
     marketIndex: number,
     amount: BN,
-    userTokenAccountPublicKey: PublicKey,
+    userTokenAccountPublicKey: PublicKey
   ): Promise<TransactionSignature> {
     const ix = await this.getDepositIntoSpotMarketRevenuePoolIx(
       marketIndex,
       amount,
-      userTokenAccountPublicKey,
+      userTokenAccountPublicKey
     );
     const tx = await this.buildTransaction([ix]);
 
@@ -8256,7 +8230,7 @@ export class DainClient {
   }
 
   public getPerpMarketExtendedInfo(
-    marketIndex: number,
+    marketIndex: number
   ): PerpMarketExtendedInfo {
     const marketAccount = this.getPerpMarketAccount(marketIndex);
     const quoteAccount = this.getSpotMarketAccount(QUOTE_SPOT_MARKET_INDEX);
@@ -8268,12 +8242,12 @@ export class DainClient {
       pnlPoolValue: getTokenAmount(
         marketAccount.pnlPool?.scaledBalance,
         quoteAccount,
-        SpotBalanceType.DEPOSIT,
+        SpotBalanceType.DEPOSIT
       ),
       contractTier: marketAccount.contractTier,
       availableInsurance: calculateMarketMaxAvailableInsurance(
         marketAccount,
-        quoteAccount,
+        quoteAccount
       ),
     };
 
@@ -8289,7 +8263,7 @@ export class DainClient {
   public getMarketFees(
     marketType: MarketType,
     marketIndex?: number,
-    user?: User,
+    user?: User
   ) {
     let feeTier;
     if (user) {
@@ -8333,7 +8307,7 @@ export class DainClient {
    * @param name
    */
   getMarketIndexAndType(
-    name: string,
+    name: string
   ): { marketIndex: number; marketType: MarketType } | undefined {
     name = name.toUpperCase();
     for (const perpMarketAccount of this.getPerpMarketAccounts()) {
@@ -8362,7 +8336,7 @@ export class DainClient {
       this.receiverProgram = new Program(
         pythSolanaReceiverIdl as PythSolanaReceiver,
         DEFAULT_RECEIVER_PROGRAM_ID,
-        this.provider,
+        this.provider
       );
     }
     return this.receiverProgram;
@@ -8371,7 +8345,7 @@ export class DainClient {
   public async getSwitchboardOnDemandProgram(): Promise<Program30<Idl30>> {
     const idl = (await Program30.fetchIdl(
       this.sbOnDemandProgramdId,
-      this.provider,
+      this.provider
     ))!;
     if (this.sbOnDemandProgram === undefined) {
       this.sbOnDemandProgram = new Program30(idl, this.provider);
@@ -8381,11 +8355,11 @@ export class DainClient {
 
   public async postPythPullOracleUpdateAtomic(
     vaaString: string,
-    feedId: string,
+    feedId: string
   ): Promise<TransactionSignature> {
     const postIxs = await this.getPostPythPullOracleUpdateAtomicIxs(
       vaaString,
-      feedId,
+      feedId
     );
     const tx = await this.buildTransaction(postIxs);
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -8395,11 +8369,11 @@ export class DainClient {
 
   public async postMultiPythPullOracleUpdatesAtomic(
     vaaString: string,
-    feedIds: string[],
+    feedIds: string[]
   ): Promise<TransactionSignature> {
     const postIxs = await this.getPostPythPullOracleUpdateAtomicIxs(
       vaaString,
-      feedIds,
+      feedIds
     );
     const tx = await this.buildTransaction(postIxs);
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
@@ -8410,19 +8384,19 @@ export class DainClient {
   public async getPostPythPullOracleUpdateAtomicIxs(
     vaaString: string,
     feedIds: string | string[],
-    numSignatures = 2,
+    numSignatures = 2
   ): Promise<TransactionInstruction[]> {
     const accumulatorUpdateData = parseAccumulatorUpdateData(
-      Buffer.from(vaaString, "base64"),
+      Buffer.from(vaaString, "base64")
     );
     const guardianSetIndex = accumulatorUpdateData.vaa.readUInt32BE(1);
     const guardianSet = getGuardianSetPda(
       guardianSetIndex,
-      DEFAULT_WORMHOLE_PROGRAM_ID,
+      DEFAULT_WORMHOLE_PROGRAM_ID
     );
     const trimmedVaa = trimVaaSignatures(
       accumulatorUpdateData.vaa,
-      numSignatures,
+      numSignatures
     );
 
     const postIxs: TransactionInstruction[] = [];
@@ -8432,14 +8406,14 @@ export class DainClient {
         {
           vaa: trimmedVaa,
           merklePriceUpdates: accumulatorUpdateData.updates,
-        },
+        }
       );
       const feedIdsToUse: string[] =
         typeof feedIds === "string" ? [feedIds] : feedIds;
       const pubkeys = feedIdsToUse.map((feedId) => {
         return getPythPullOraclePublicKey(
           this.program.programId,
-          getFeedIdUint8Array(feedId),
+          getFeedIdUint8Array(feedId)
         );
       });
 
@@ -8460,8 +8434,8 @@ export class DainClient {
               guardianSet,
             },
             remainingAccounts,
-          },
-        ),
+          }
+        )
       );
     } else {
       let feedIdToUse = typeof feedIds === "string" ? feedIds : feedIds[0];
@@ -8473,8 +8447,8 @@ export class DainClient {
             merklePriceUpdate: accumulatorUpdateData.updates[0],
           },
           feedIdToUse,
-          guardianSet,
-        ),
+          guardianSet
+        )
       );
     }
     return postIxs;
@@ -8489,14 +8463,14 @@ export class DainClient {
       };
     },
     feedId: string,
-    guardianSet: PublicKey,
+    guardianSet: PublicKey
   ): Promise<TransactionInstruction> {
     const feedIdBuffer = getFeedIdUint8Array(feedId);
     const receiverProgram = this.getReceiverProgram();
 
     const encodedParams = receiverProgram.coder.types.encode(
       "PostUpdateAtomicParams",
-      params,
+      params
     );
 
     return this.program.instruction.postPythPullOracleUpdateAtomic(
@@ -8509,30 +8483,30 @@ export class DainClient {
           guardianSet,
           priceFeed: getPythPullOraclePublicKey(
             this.program.programId,
-            feedIdBuffer,
+            feedIdBuffer
           ),
         },
-      },
+      }
     );
   }
 
   public async updatePythPullOracle(
     vaaString: string,
-    feedId: string,
+    feedId: string
   ): Promise<TransactionSignature> {
     feedId = trimFeedId(feedId);
     const accumulatorUpdateData = parseAccumulatorUpdateData(
-      Buffer.from(vaaString, "base64"),
+      Buffer.from(vaaString, "base64")
     );
     const guardianSetIndex = accumulatorUpdateData.vaa.readUInt32BE(1);
     const guardianSet = getGuardianSetPda(
       guardianSetIndex,
-      DEFAULT_WORMHOLE_PROGRAM_ID,
+      DEFAULT_WORMHOLE_PROGRAM_ID
     );
 
     const [postIxs, encodedVaaAddress] = await this.getBuildEncodedVaaIxs(
       accumulatorUpdateData.vaa,
-      guardianSet,
+      guardianSet
     );
 
     for (const update of accumulatorUpdateData.updates) {
@@ -8542,8 +8516,8 @@ export class DainClient {
             merklePriceUpdate: update,
           },
           feedId,
-          encodedVaaAddress.publicKey,
-        ),
+          encodedVaaAddress.publicKey
+        )
       );
     }
 
@@ -8551,7 +8525,7 @@ export class DainClient {
     const { txSig } = await this.sendTransaction(
       tx,
       [encodedVaaAddress],
-      this.opts,
+      this.opts
     );
 
     return txSig;
@@ -8565,14 +8539,14 @@ export class DainClient {
       };
     },
     feedId: string,
-    encodedVaaAddress: PublicKey,
+    encodedVaaAddress: PublicKey
   ): Promise<TransactionInstruction> {
     const feedIdBuffer = getFeedIdUint8Array(feedId);
     const receiverProgram = this.getReceiverProgram();
 
     const encodedParams = receiverProgram.coder.types.encode(
       "PostUpdateParams",
-      params,
+      params
     );
 
     return this.program.instruction.updatePythPullOracle(
@@ -8585,17 +8559,17 @@ export class DainClient {
           encodedVaa: encodedVaaAddress,
           priceFeed: getPythPullOraclePublicKey(
             this.program.programId,
-            feedIdBuffer,
+            feedIdBuffer
           ),
         },
-      },
+      }
     );
   }
 
   public async getPostSwitchboardOnDemandUpdateAtomicIx(
     feed: PublicKey,
     recentSlothash?: Slothash,
-    numSignatures = 3,
+    numSignatures = 3
   ): Promise<TransactionInstruction | undefined> {
     const program = await this.getSwitchboardOnDemandProgram();
     const feedAccount = new PullFeed(program, feed);
@@ -8612,7 +8586,7 @@ export class DainClient {
       },
       recentSlothash
         ? [[new BN(recentSlothash.slot), recentSlothash.hash]]
-        : undefined,
+        : undefined
     );
     if (!success) {
       return undefined;
@@ -8623,12 +8597,12 @@ export class DainClient {
   public async postSwitchboardOnDemandUpdate(
     feed: PublicKey,
     recentSlothash?: Slothash,
-    numSignatures = 3,
+    numSignatures = 3
   ): Promise<TransactionSignature> {
     const pullIx = await this.getPostSwitchboardOnDemandUpdateAtomicIx(
       feed,
       recentSlothash,
-      numSignatures,
+      numSignatures
     );
     if (!pullIx) {
       return undefined;
@@ -8650,7 +8624,7 @@ export class DainClient {
 
   private async getBuildEncodedVaaIxs(
     vaa: Buffer,
-    guardianSet: PublicKey,
+    guardianSet: PublicKey
   ): Promise<[TransactionInstruction[], Keypair]> {
     const postIxs: TransactionInstruction[] = [];
 
@@ -8658,7 +8632,7 @@ export class DainClient {
       this.wormholeProgram = new Program(
         wormholeCoreBridgeIdl,
         DEFAULT_WORMHOLE_PROGRAM_ID,
-        this.provider,
+        this.provider
       );
     }
 
@@ -8666,8 +8640,8 @@ export class DainClient {
     postIxs.push(
       await this.wormholeProgram.account.encodedVaa.createInstruction(
         encodedVaaKeypair,
-        vaa.length + 46,
-      ),
+        vaa.length + 46
+      )
     );
 
     // Why do we need this too?
@@ -8677,7 +8651,7 @@ export class DainClient {
         .accounts({
           encodedVaa: encodedVaaKeypair.publicKey,
         })
-        .instruction(),
+        .instruction()
     );
 
     // Split the write into two ixs
@@ -8690,7 +8664,7 @@ export class DainClient {
         .accounts({
           draftVaa: encodedVaaKeypair.publicKey,
         })
-        .instruction(),
+        .instruction()
     );
 
     postIxs.push(
@@ -8702,7 +8676,7 @@ export class DainClient {
         .accounts({
           draftVaa: encodedVaaKeypair.publicKey,
         })
-        .instruction(),
+        .instruction()
     );
 
     // Verify
@@ -8713,7 +8687,7 @@ export class DainClient {
           guardianSet,
           draftVaa: encodedVaaKeypair.publicKey,
         })
-        .instruction(),
+        .instruction()
     );
 
     return [postIxs, encodedVaaKeypair];
@@ -8721,15 +8695,15 @@ export class DainClient {
 
   public async enableUserHighLeverageMode(
     subAccountId: number,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getEnableHighLeverageModeIx(subAccountId),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
@@ -8740,7 +8714,7 @@ export class DainClient {
       isMakingNewAccount: boolean;
       depositMarketIndex: number;
       orderMarketIndex: number;
-    },
+    }
   ): Promise<TransactionInstruction> {
     const isDepositToTradeTx = depositToTradeArgs !== undefined;
 
@@ -8763,15 +8737,15 @@ export class DainClient {
           user: getUserAccountPublicKeySync(
             this.program.programId,
             this.wallet.publicKey,
-            subAccountId,
+            subAccountId
           ),
           authority: this.wallet.publicKey,
           highLeverageModeConfig: getHighLeverageModeConfigPublicKey(
-            this.program.programId,
+            this.program.programId
           ),
         },
         remainingAccounts,
-      },
+      }
     );
 
     return ix;
@@ -8780,22 +8754,22 @@ export class DainClient {
   public async disableUserHighLeverageMode(
     user: PublicKey,
     userAccount?: UserAccount,
-    txParams?: TxParams,
+    txParams?: TxParams
   ): Promise<TransactionSignature> {
     const { txSig } = await this.sendTransaction(
       await this.buildTransaction(
         await this.getDisableHighLeverageModeIx(user, userAccount),
-        txParams,
+        txParams
       ),
       [],
-      this.opts,
+      this.opts
     );
     return txSig;
   }
 
   public async getDisableHighLeverageModeIx(
     user: PublicKey,
-    userAccount?: UserAccount,
+    userAccount?: UserAccount
   ): Promise<TransactionInstruction> {
     const remainingAccounts = userAccount
       ? this.getRemainingAccounts({
@@ -8809,7 +8783,7 @@ export class DainClient {
         user,
         authority: this.wallet.publicKey,
         highLeverageModeConfig: getHighLeverageModeConfigPublicKey(
-          this.program.programId,
+          this.program.programId
         ),
       },
       remainingAccounts,
@@ -8820,7 +8794,7 @@ export class DainClient {
 
   public async fetchHighLeverageModeConfig(): Promise<HighLeverageModeConfig> {
     const config = await this.program.account.highLeverageModeConfig.fetch(
-      getHighLeverageModeConfigPublicKey(this.program.programId),
+      getHighLeverageModeConfigPublicKey(this.program.programId)
     );
     return config as HighLeverageModeConfig;
   }
@@ -8838,7 +8812,7 @@ export class DainClient {
   }
 
   private isVersionedTransaction(
-    tx: Transaction | VersionedTransaction,
+    tx: Transaction | VersionedTransaction
   ): boolean {
     return isVersionedTransaction(tx);
   }
@@ -8856,7 +8830,7 @@ export class DainClient {
     tx: Transaction | VersionedTransaction,
     additionalSigners?: Array<Signer>,
     opts?: ConfirmOptions,
-    preSigned?: boolean,
+    preSigned?: boolean
   ): Promise<TxSigAndSlot> {
     const isVersionedTx = this.isVersionedTransaction(tx);
 
@@ -8865,14 +8839,14 @@ export class DainClient {
         tx as VersionedTransaction,
         additionalSigners,
         opts ?? this.opts,
-        preSigned,
+        preSigned
       );
     } else {
       return this.txSender.send(
         tx as Transaction,
         additionalSigners,
         opts ?? this.opts,
-        preSigned,
+        preSigned
       );
     }
   }
@@ -8883,7 +8857,7 @@ export class DainClient {
     txVersion?: TransactionVersion,
     lookupTables?: AddressLookupTableAccount[],
     forceVersionedTransaction?: boolean,
-    recentBlockhash?: BlockhashWithExpiryBlockHeight,
+    recentBlockhash?: BlockhashWithExpiryBlockHeight
   ): Promise<Transaction | VersionedTransaction> {
     return this.txHandler.buildTransaction({
       instructions,
@@ -8904,7 +8878,7 @@ export class DainClient {
     txParams?: TxParams,
     txVersion?: TransactionVersion,
     lookupTables?: AddressLookupTableAccount[],
-    forceVersionedTransaction?: boolean,
+    forceVersionedTransaction?: boolean
   ): Promise<(Transaction | VersionedTransaction)[]> {
     return this.txHandler.buildBulkTransactions({
       instructions,
@@ -8927,7 +8901,7 @@ export class DainClient {
     txParams?: TxParams,
     txVersion?: TransactionVersion,
     lookupTables?: AddressLookupTableAccount[],
-    forceVersionedTransaction?: boolean,
+    forceVersionedTransaction?: boolean
   ) {
     return this.txHandler.buildTransactionsMap({
       instructionsMap,
@@ -8950,7 +8924,7 @@ export class DainClient {
     txParams?: TxParams,
     txVersion?: TransactionVersion,
     lookupTables?: AddressLookupTableAccount[],
-    forceVersionedTransaction?: boolean,
+    forceVersionedTransaction?: boolean
   ) {
     return this.txHandler.buildAndSignTransactionMap({
       instructionsMap,
