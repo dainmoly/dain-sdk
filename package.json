@@ -1,7 +1,7 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
@@ -10,15 +10,16 @@
     "test": "mocha -r ts-node/register tests/**/*.ts"
   },
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
   "type": "commonjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
-    }
+      "import": "./dist/esm/index.js",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/"
