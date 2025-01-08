@@ -1,7 +1,7 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
@@ -22,7 +22,7 @@
     "url": "https://github.com/dainmoly/dain-sdk"
   },
   "engines": {
-    "node": ">=20.18.0"
+    "node": ">=20.7.0"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.28.0",
