@@ -30,10 +30,23 @@ jobs:
       - name: Install main dependencies
         run: yarn install
 
-      - name: Compile code
-        run: yarn build
-
+      - name: Build sdk
+        run: |
+          yarn
+          yarn build
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build sdk for browser
+        run: |
+          yarn
+          yarn build:browser
+          # Update package name for browser version while keeping the same version
+          node -e "const pkg = require('./package.json'); pkg.name = pkg.name + '-browser'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+          
+      - name: Publish browser version to npm
+        run: npm publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

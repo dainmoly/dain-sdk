@@ -4,10 +4,9 @@
 		"target": "ES2019",
 		"esModuleInterop": true,
 		"declaration": true,
-		"outDir": "./dist/browser",
+		"outDir": "./lib/browser",
 		"resolveJsonModule": true,
-		"skipLibCheck": true,
-        "useDefineForClassFields": false,
+		"skipLibCheck": true
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", "tests"]

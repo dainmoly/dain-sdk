@@ -3974,9 +3974,19 @@
           "name": "perpMarket",
           "isMut": true,
           "isSigner": false
+        },
+        {
+          "name": "oracle",
+          "isMut": false,
+          "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "resolveTs",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "deleteInitializedPerpMarket",
@@ -7224,13 +7234,15 @@
             "type": "u16"
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                38
-              ]
-            }
+            "name": "resolveTs",
+            "docs": [
+              "prediction resolve timestamp"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "resolveOracle",
+            "type": "publicKey"
           }
         ]
       }
@@ -14311,8 +14323,5 @@
       "name": "InvalidProtectedMakerModeConfig",
       "msg": "Invalid Protected Maker Mode Config"
     }
-  ],
-  "metadata": {
-    "address": "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH"
-  }
+  ]
 }
