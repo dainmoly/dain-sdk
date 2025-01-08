@@ -1,12 +1,11 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
 		"build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json",
-		"build:browser": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json --force-env browser",
     "clean": "rm -fr lib/",
     "test": "mocha -r ts-node/register tests/**/*.ts"
   },

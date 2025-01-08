@@ -38,15 +38,3 @@ jobs:
         run: npm publish --access=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Build sdk for browser
-        run: |
-          yarn
-          yarn build:browser
-          # Update package name for browser version while keeping the same version
-          node -e "const pkg = require('./package.json'); pkg.name = pkg.name + '-browser'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-          
-      - name: Publish browser version to npm
-        run: npm publish --access=public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
