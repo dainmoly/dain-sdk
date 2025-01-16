@@ -194,7 +194,7 @@ type RemainingAccountParams = {
  */
 export class DainClient {
   connection: Connection;
-  wallet: IWallet;
+  wallet?: IWallet;
   public program: Program;
   public swiftID: PublicKey;
   provider: AnchorProvider;
@@ -7898,6 +7898,41 @@ export class DainClient {
 
     const { txSig } = await this.sendTransaction(tx, [], this.opts);
     return txSig;
+  }
+
+  public async getRemoveInsuranceFundStakeIx(
+    marketIndex: number,
+    collateralAccountPublicKey: PublicKey
+  ): Promise<TransactionInstruction> {
+    const spotMarket = this.getSpotMarketAccount(marketIndex);
+    const ifStakeAccountPublicKey = getInsuranceFundStakeAccountPublicKey(
+      this.program.programId,
+      this.wallet.publicKey,
+      marketIndex
+    );
+
+    const remainingAccounts = [];
+    this.addTokenMintToRemainingAccounts(spotMarket, remainingAccounts);
+    const tokenProgram = this.getTokenProgramForSpotMarket(spotMarket);
+    const ix = await this.program.instruction.removeInsuranceFundStake(
+      marketIndex,
+      {
+        accounts: {
+          state: await this.getStatePublicKey(),
+          spotMarket: spotMarket.pubkey,
+          insuranceFundStake: ifStakeAccountPublicKey,
+          userStats: this.getUserStatsAccountPublicKey(),
+          authority: this.wallet.publicKey,
+          insuranceFundVault: spotMarket.insuranceFund.vault,
+          driftSigner: this.getSignerPublicKey(),
+          userTokenAccount: collateralAccountPublicKey,
+          tokenProgram,
+        },
+        remainingAccounts,
+      }
+    );
+
+    return ix;
   }
 
   public async removeInsuranceFundStake(
