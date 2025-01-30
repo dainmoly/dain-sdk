@@ -1,11 +1,11 @@
 {
   "name": "dain-sdk",
   "author": "Dainmoly <dainsm@proton.me>",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "Apache-2.0",
   "description": "DAIN prediction's TS sdk",
   "scripts": {
-		"build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json",
+    "build": "yarn clean && tsc -p tsconfig.json && tsc -p tsconfig.browser.json",
     "clean": "rm -fr lib/",
     "test": "mocha -r ts-node/register tests/**/*.ts"
   },
@@ -15,9 +15,9 @@
   "directories": {
     "lib": "lib"
   },
-	"publishConfig": {
-		"access": "public"
-	},
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "url": "https://github.com/dainmoly/dain-sdk"
   },
@@ -29,6 +29,7 @@
     "@coral-xyz/anchor-30": "npm:@coral-xyz/anchor@0.30.1",
     "@ellipsis-labs/phoenix-sdk": "^1.4.2",
     "@inquirer/prompts": "^7.2.0",
+    "@metaplex-foundation/js": "^0.20.1",
     "@openbook-dex/openbook-v2": "0.2.10",
     "@project-serum/serum": "^0.13.38",
     "@pythnetwork/client": "2.5.3",
